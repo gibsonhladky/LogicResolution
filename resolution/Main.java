@@ -76,6 +76,6 @@ public class Main extends PApplet
 		String logic = in.nextLine();
 		inputXML = LogicParser.toXML(logic);
 		in.close();
-		PApplet.main("Main");
+		PApplet.main("resolution.Main");
 	}
 }
