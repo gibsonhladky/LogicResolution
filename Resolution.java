@@ -3,9 +3,9 @@ import java.util.ArrayList;
 import processing.core.PApplet;
 import processing.data.XML;
 
-public class GIBSON_HLADKY_Resolution extends DrawableTree
+public class Resolution extends DrawableTree
 {
-	public GIBSON_HLADKY_Resolution(PApplet p, XML tree) 
+	public Resolution(PApplet p, XML tree) 
 	{ 
 		super(p); 
 		this.tree = tree; 

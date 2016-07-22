@@ -15,7 +15,7 @@ public class Main extends PApplet
 	
 	public void setup()
 	{
-		dtree = new GIBSON_HLADKY_Resolution(this,inputXML);
+		dtree = new Resolution(this,inputXML);
 		keyWasDown = true;
 		status = "Logic Loaded";
 	}
