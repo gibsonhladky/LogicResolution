@@ -112,12 +112,15 @@ public class ResolutionTest {
 		assertFalse(resolution.applyResolution());
 	}
 	
-	@Test public void applyResolutionFindsAllResolvents() {
+	@Test public void applyResolutionFindsNoResolvents() {
 		givenInput("(A || B) && (A || C)");
 		resolution.collapse();
-		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><A/><C/></or><or><B/><C/></or></and></logic>");
+		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><A/><C/></or></and></logic>");
 	}
 
+	// TODO: Test for applyResolution adding resolvents to the tree
+	// TODO: Figure out what resolvents are...
+	
 	private void givenInput(String input) {
 		actual = LogicParser.toXML(input);
 		resolution = new Resolution(applet, actual);
