@@ -24,6 +24,20 @@ public class ResolutionTest {
 	}
 	
 	@Test
+	public void complexBiconditionalEliminated() {
+		givenInput("(A || B) <=> !(A && C)");
+		resolution.eliminateBiconditions();
+		assertLogicMatches("((A || B) => !(A && C)) && (!(A && C) => (A || B))");
+	}
+	
+	@Test
+	public void nestedBiconditions() {
+		givenInput("A <=> (B <=> C)");
+		resolution.eliminateBiconditions();
+		assertLogicMatches("(A => ((B => C) && (C => B))) && (((B => C) && (C => B)) => A)");
+	}
+	
+	@Test
 	public void simpleConditionalEliminated() {
 		givenInput("A => B");
 		resolution.eliminateConditions();
@@ -31,7 +45,21 @@ public class ResolutionTest {
 	}
 	
 	@Test
-	public void moveNegationInwardsRemovesDoubleNot() {
+	public void complexConditionalEliminated() {
+		givenInput("(A || B) => !(A && C)");
+		resolution.eliminateConditions();
+		assertLogicMatches("!(A && C) || !(A || B)");
+	}
+	
+	@Test
+	public void nestedConditionalEliminated() {
+		givenInput("A => (B => C)");
+		resolution.eliminateConditions();
+		assertLogicMatches("(C || !B) || !A");
+	}
+	
+	@Test
+	public void removeDoubleNot() {
 		givenInput("!! A");
 		resolution.moveNegationInwards();
 		assertLogicMatches("A");
@@ -52,10 +80,23 @@ public class ResolutionTest {
 	}
 	
 	@Test
+	public void complexMoveNegationInwards() {
+		givenInput("!(A && !(B || !C))");
+		resolution.moveNegationInwards();
+		assertLogicMatches("!A || (B || !C)");
+	}
+	
+	@Test
 	public void simpleDistributeOrsOverAnds() {
-		givenInput("( A && B) || C");
+		givenInput("(A && B) || C");
 		resolution.distributeOrsOverAnds();
 		assertLogicMatches("(A || C) && (B || C)");
+	}
+	
+	@Test public void complexDistributeOrsOverAnds() {
+		givenInput("(!A && B) || (B && C)");
+		resolution.distributeOrsOverAnds();
+		assertLogicMatches("((!A || B) && (!A || C)) && ((B || B) && (B || C))");
 	}
 	
 	private void givenInput(String input) {
