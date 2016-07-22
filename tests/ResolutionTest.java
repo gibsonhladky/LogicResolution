@@ -12,102 +12,90 @@ import resolution.Resolution;
 public class ResolutionTest {
 
 	PApplet applet = new PApplet();
-	
+
 	Resolution resolution;
 	XML actual;
 
-	@Test
-	public void simpleBiconditionalEliminated() {
+	@Test public void simpleBiconditionalEliminated() {
 		givenInput("A <=> B");
 		resolution.eliminateBiconditions();
 		assertLogicMatches("(A => B) && (B => A)");
 	}
-	
-	@Test
-	public void complexBiconditionalEliminated() {
+
+	@Test public void complexBiconditionalEliminated() {
 		givenInput("(A || B) <=> !(A && C)");
 		resolution.eliminateBiconditions();
 		assertLogicMatches("((A || B) => !(A && C)) && (!(A && C) => (A || B))");
 	}
-	
-	@Test
-	public void nestedBiconditions() {
+
+	@Test public void nestedBiconditions() {
 		givenInput("A <=> (B <=> C)");
 		resolution.eliminateBiconditions();
 		assertLogicMatches("(A => ((B => C) && (C => B))) && (((B => C) && (C => B)) => A)");
 	}
-	
-	@Test
-	public void simpleConditionalEliminated() {
+
+	@Test public void simpleConditionalEliminated() {
 		givenInput("A => B");
 		resolution.eliminateConditions();
 		assertLogicMatches("B || (! A)");
 	}
-	
-	@Test
-	public void complexConditionalEliminated() {
+
+	@Test public void complexConditionalEliminated() {
 		givenInput("(A || B) => !(A && C)");
 		resolution.eliminateConditions();
 		assertLogicMatches("!(A && C) || !(A || B)");
 	}
-	
-	@Test
-	public void nestedConditionalEliminated() {
+
+	@Test public void nestedConditionalEliminated() {
 		givenInput("A => (B => C)");
 		resolution.eliminateConditions();
 		assertLogicMatches("(C || !B) || !A");
 	}
-	
-	@Test
-	public void removeDoubleNot() {
+
+	@Test public void removeDoubleNot() {
 		givenInput("!! A");
 		resolution.moveNegationInwards();
 		assertLogicMatches("A");
 	}
-	
-	@Test
-	public void deMorgansOverAnd() {
+
+	@Test public void deMorgansOverAnd() {
 		givenInput("!(A && B)");
 		resolution.moveNegationInwards();
 		assertLogicMatches("(!A) || (!B)");
 	}
-	
-	@Test
-	public void deMorgansOverOr() {
+
+	@Test public void deMorgansOverOr() {
 		givenInput("!(A || B)");
 		resolution.moveNegationInwards();
 		assertLogicMatches("(!A) && (!B)");
 	}
-	
-	@Test
-	public void complexMoveNegationInwards() {
+
+	@Test public void complexMoveNegationInwards() {
 		givenInput("!(A && !(B || !C))");
 		resolution.moveNegationInwards();
 		assertLogicMatches("!A || (B || !C)");
 	}
-	
-	@Test
-	public void simpleDistributeOrsOverAnds() {
+
+	@Test public void simpleDistributeOrsOverAnds() {
 		givenInput("(A && B) || C");
 		resolution.distributeOrsOverAnds();
 		assertLogicMatches("(A || C) && (B || C)");
 	}
-	
+
 	@Test public void complexDistributeOrsOverAnds() {
 		givenInput("(!A && B) || (B && C)");
 		resolution.distributeOrsOverAnds();
 		assertLogicMatches("((!A || B) && (!A || C)) && ((B || B) && (B || C))");
 	}
-	
+
 	private void givenInput(String input) {
 		actual = LogicParser.toXML(input);
 		resolution = new Resolution(applet, actual);
 	}
-	
+
 	/*
-	 * XML's equals() method is not implemented, but
-	 * it's toString() is, so matching strings is a simple
-	 * work around to checking equals.
+	 * XML's equals() method is not implemented, but it's toString() is, so
+	 * matching strings is a simple work around to checking equals.
 	 */
 	private void assertLogicMatches(String expected) {
 		assertEquals(LogicParser.toXML(expected).toString(), actual.toString());
