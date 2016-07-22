@@ -87,18 +87,50 @@ public class ResolutionTest {
 		resolution.distributeOrsOverAnds();
 		assertLogicMatches("((!A || B) && (!A || C)) && ((B || B) && (B || C))");
 	}
+	
+	@Test public void simpleCollapse() {
+		givenInput("(A || B) && ((B || C) && (A || C))");
+		resolution.collapse();
+		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><B/><C/></or><or><A/><C/></or></and></logic>");
+	}
+	
+	@Test public void applyResolutionDetectsSimpleConflict() {
+		givenInput("(A) && (!A)");
+		resolution.collapse();
+		assertTrue(resolution.applyResolution());
+	}
+	
+	@Test public void applyResolutionDetectsComplexConflict() {
+		givenInput("(A || B || !C) && (A || !B) && (!A || C)");
+		resolution.collapse();
+		assertTrue(resolution.applyResolution());
+	}
+	
+	@Test public void applyResolutionFindsNoConflicts() {
+		givenInput("(A || B || !C) && (A || !B) && (A || C)");
+		resolution.collapse();
+		assertFalse(resolution.applyResolution());
+	}
+	
+	@Test public void applyResolutionFindsAllResolvents() {
+		givenInput("(A || B) && (A || C)");
+		resolution.collapse();
+		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><A/><C/></or><or><B/><C/></or></and></logic>");
+	}
 
 	private void givenInput(String input) {
 		actual = LogicParser.toXML(input);
 		resolution = new Resolution(applet, actual);
 	}
 
-	/*
-	 * XML's equals() method is not implemented, but it's toString() is, so
-	 * matching strings is a simple work around to checking equals.
-	 */
+	// XML's equals() method is not implemented, but it's toString() is, so
+	// matching strings is a simple work around to checking equals.
 	private void assertLogicMatches(String expected) {
 		assertEquals(LogicParser.toXML(expected).toString(), actual.toString());
+	}
+	
+	private void assertCollapsedLogicMatches(String expected) {
+		assertEquals(expected, actual.toString());
 	}
 
 }
