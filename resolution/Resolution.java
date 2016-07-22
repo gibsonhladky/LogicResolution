@@ -1,11 +1,12 @@
+package resolution;
 import java.util.ArrayList;
 
 import processing.core.PApplet;
 import processing.data.XML;
 
-public class GIBSON_HLADKY_Resolution extends DrawableTree
+public class Resolution extends DrawableTree
 {
-	public GIBSON_HLADKY_Resolution(PApplet p, XML tree) 
+	public Resolution(PApplet p, XML tree) 
 	{ 
 		super(p); 
 		this.tree = tree; 
@@ -23,7 +24,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	// Recursively searches through the logic tree to replace and biconditionals
 	// with truth preserving conjunctions of conditions.
-	public void eliminateBiconditionsRecursive(XML node)
+	private void eliminateBiconditionsRecursive(XML node)
 	{
 		XML[] children = node.getChildren();
 		// Search for a biconditional child
@@ -65,7 +66,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	
 	// Recursively replace conditions with truth preserving disjunctions
-	public void eliminateConditionsRecursive(XML node)
+	private void eliminateConditionsRecursive(XML node)
 	{
 		XML[] children = node.getChildren();
 		// Search for conditions
@@ -98,7 +99,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	
 	// Recursively move negations in a truth preserving way to apply only to literals
-	public void moveNegationInwardsRecursive(XML node)
+	private void moveNegationInwardsRecursive(XML node)
 	{
 		XML[] children = node.getChildren();
 		boolean child_change = false;
@@ -176,7 +177,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	
 	// Recursively move negations in a truth preserving way to apply only to literals
-	public void distributeOrsoverAndsRecursive(XML tree)
+	private void distributeOrsoverAndsRecursive(XML tree)
 	{
 		XML[] children = tree.getChildren();
 		boolean change_happened = false;
@@ -260,7 +261,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	// Converts binary AND/OR nodes to multi-child nodes.
 	// Assumes ORs have been distributed over ANDs for proper function
-	public void unnestAndsOrs(XML node) {
+	private void unnestAndsOrs(XML node) {
 		XML child;
 		boolean changed = false;
 		if(node.getName().equals("and")) {
@@ -311,7 +312,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	// Guarantees a format of root = logic, with one AND child
 	// that has multiple OR children
-	public void guaranteeFormat() {
+	private void guaranteeFormat() {
 		XML firstNode = this.tree.getChild(0);
 		// Ensure first node is AND
 		if(!firstNode.getName().equals("and")) {
@@ -339,7 +340,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	// Removes redundant literals from all clauses, then removes
 	// any redundant clauses
-	public void removeRedundancy(XML set) {
+	private void removeRedundancy(XML set) {
 		//Remove redundant literals from each clause:
 		for(int i = 0; i < set.getChildCount(); i++) {
 			removeRedundantLiterals(set.getChild(i));
@@ -369,7 +370,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 
 	
 	// Removes all redundant literals from a clause
-	public void removeRedundantLiterals(XML clause) {
+	private void removeRedundantLiterals(XML clause) {
 		XML l1, l2; // Two literals
 		// Compare all literals in the clause
 		for(int i = 0; i < clause.getChildCount(); i++) {
@@ -391,7 +392,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	
 	// Removes any tautologies in a set
-	public void removeTautologies(XML set) {
+	private void removeTautologies(XML set) {
 		XML clause;
 		for(int i = 0; i < set.getChildCount(); i++) {
 			clause = set.getChild(i);
@@ -451,7 +452,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	// resulting resolvent.  If there is a conflict,
 	// returns an XML node with zero children.  If the two clauses cannot
 	// be resolved,returns null.
-	public XML resolve(XML clause1, XML clause2)
+	private XML resolve(XML clause1, XML clause2)
 	{
 		XML lit; // A literal
 		XML resolvent = new XML("or");
@@ -500,7 +501,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 
 
 	// Returns true when literal is negated and false otherwise.
-	public boolean isLiteralNegated(XML literal) 
+	private boolean isLiteralNegated(XML literal) 
 	{
 		if(literal.getName().equals("not")) {
 			return true;
@@ -514,7 +515,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 
 
 	// Returns the name of the atom in literal as a string.
-	public String getAtomFromLiteral(XML literal)
+	private String getAtomFromLiteral(XML literal)
 	{
 		if(literal.getName().equals("not")) {
 			return literal.getChild(0).getName();
@@ -525,7 +526,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 
 	// Returns true when the provided clause contains a literal
 	// with the atomic name and negation (isNegated).  Otherwise, returns false.
-	public boolean clauseContainsLiteral(XML clause, String atom, boolean isNegated)
+	private boolean clauseContainsLiteral(XML clause, String atom, boolean isNegated)
 	{
 		XML child;
 		// Check all children of clause for the provided literal
@@ -541,7 +542,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	
 	// Returns true when the set contains a clause with the
 	// same set of literals as the clause parameter.  Otherwise, returns false.
-	public boolean setContainsClause(XML set, XML clause)
+	private boolean setContainsClause(XML set, XML clause)
 	{
 		boolean negated;
 		boolean isClause = true;
@@ -571,7 +572,7 @@ public class GIBSON_HLADKY_Resolution extends DrawableTree
 	// Returns true when this clause contains a literal,
 	// along with the negated form of that same literal.
 	// Otherwise, returns false.
-	public boolean clauseIsTautology(XML clause)
+	private boolean clauseIsTautology(XML clause)
 	{
 		XML literal;
 		// Iterate over all children of clause

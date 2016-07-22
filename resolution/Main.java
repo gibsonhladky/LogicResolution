@@ -1,3 +1,4 @@
+package resolution;
 
 import java.util.Scanner;
 
@@ -15,7 +16,7 @@ public class Main extends PApplet
 	
 	public void setup()
 	{
-		dtree = new GIBSON_HLADKY_Resolution(this,inputXML);
+		dtree = new Resolution(this,inputXML);
 		keyWasDown = true;
 		status = "Logic Loaded";
 	}
@@ -75,6 +76,6 @@ public class Main extends PApplet
 		String logic = in.nextLine();
 		inputXML = LogicParser.toXML(logic);
 		in.close();
-		PApplet.main("Main");
+		PApplet.main("resolution.Main");
 	}
 }
