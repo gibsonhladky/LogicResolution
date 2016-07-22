@@ -1,3 +1,4 @@
+package resolution;
 
 import java.util.Scanner;
 
