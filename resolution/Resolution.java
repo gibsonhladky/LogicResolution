@@ -26,36 +26,46 @@ public class Resolution extends DrawableTree
 	// with truth preserving conjunctions of conditions.
 	private void eliminateBiconditionsRecursive(XML node)
 	{
-		XML[] children = node.getChildren();
-		// Search for a biconditional child
 		// Base case: leaf node (no children)
-		for(int i = 0; i < children.length; i++) {
-			XML curr = children[i];
+		for(XML child : node.getChildren()) {
 			// Recurse down tree
-			eliminateBiconditionsRecursive(curr);
-			// Replace bicondition with conjunction of conditions
-			if(curr.getName().equals("bicondition")) {
-				// curr = A<=>B will become (A=>B)&&(B=>A) //
-				// Create truth preserving conditions:
-				XML left = new XML("condition");
-				XML right = new XML("condition");
-				// Left = A=>B
-				left.addChild(curr.getChild(0));
-				left.addChild(curr.getChild(1));
-				// Right = B=>A
-				right.addChild(curr.getChild(1));
-				right.addChild(curr.getChild(0));
-				// Change original bicondition to (left&&right)
-				curr.removeChild(curr.getChild(1));
-				curr.removeChild(curr.getChild(0));
-				curr.addChild(left);
-				curr.addChild(right);
-				// Change node from 'bicondition' to 'and'
-				curr.setName("and");
+			eliminateBiconditionsRecursive(child);
+			if(isBicondition(child)) {
+				decomposeToConditions(child);
 			}
 		}
 	}
 	
+	private boolean isBicondition(XML node) {
+		return node.getName().equals("bicondition");
+	}
+	
+	// From: A <=> B  To: (A => B) && (B => A)
+	private void decomposeToConditions(XML bicondition) {
+		bicondition.addChild(getForwardConditionFrom(bicondition));
+		bicondition.addChild(getBackwardConditionFrom(bicondition));
+		
+		bicondition.removeChild(bicondition.getChild(1));
+		bicondition.removeChild(bicondition.getChild(0));
+		
+		bicondition.setName("and"); // from "bicondition"
+	}
+	
+	// Returns A => B from A <=> B
+	private XML getForwardConditionFrom(XML bicondition) {
+		XML forwardCondition = new XML("condition");
+		forwardCondition.addChild(bicondition.getChild(0));
+		forwardCondition.addChild(bicondition.getChild(1));
+		return forwardCondition;
+	}
+	
+	// Returns B => A from A <=> B
+	private XML getBackwardConditionFrom(XML bicondition) {
+		XML backwardCondition = new XML("condition");
+		backwardCondition.addChild(bicondition.getChild(1));
+		backwardCondition.addChild(bicondition.getChild(0));
+		return backwardCondition;
+	}
 	
 	// Replace all conditions with truth preserving disjunctions.
 	public void eliminateConditions()
