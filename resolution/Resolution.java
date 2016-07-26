@@ -1,6 +1,5 @@
 package resolution;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import processing.core.PApplet;
 import processing.data.XML;
@@ -115,11 +114,11 @@ public class Resolution extends DrawableTree
 		for(XML child : node.getChildren()) {
 			if(isNot(child)) {
 				// Keep any easy access variable to not's child
-				XML isChildOfNot = child.getChild(0);
-				if(isTerm(isChildOfNot)) {
+				XML grandchild = child.getChild(0);
+				if(isTerm(grandchild)) {
 					continue;
 				}
-				replaceWith(child, negate(isChildOfNot));
+				replace_With(child, negate(grandchild));
 				// Recurse on this node again, since the structure has changed
 				moveAllNegationsInwardsRecursive(node);
 			}
@@ -129,11 +128,12 @@ public class Resolution extends DrawableTree
 		}
 	}
 	
-	private void replaceWith(XML child, XML replacement) {
+	private void replace_With(XML child, XML replacement) {
 		child.getParent().addChild(replacement);
 		child.getParent().removeChild(child);
 	}
 	
+	// TODO: eliminate duplication for deMorgan's law
 	private XML negate(XML node) {
 		if(isNot(node)) {
 			return node.getChild(0);
@@ -191,64 +191,56 @@ public class Resolution extends DrawableTree
 	
 	
 	// Recursively move negations in a truth preserving way to apply only to literals
-	private void distributeOrsoverAndsRecursive(XML tree)
-	{
-		XML[] children = tree.getChildren();
-		boolean change_happened = false;
-		boolean any_change_happened = false;
-		// Travel down tree searching for or's
-		for(int i = 0; i < children.length; i++) {
-			XML curr = children[i];
-			if(curr.getName().equals("or")) {
-				change_happened = false;
+	private void distributeOrsoverAndsRecursive(XML node) {	
+		for(XML curr : node.getChildren()) {
+			if(isOr(curr)) {
 				XML left = curr.getChild(0);
 				XML right = curr.getChild(1);
-				if(left.getName().equals("and")) {
-					// curr = (X&&Y)||Z will become (X||Z)&&(Y||Z)
-					XML or1 = new XML("or");
-					XML or2 = new XML("or");
-					or1.addChild(left.getChild(0));
-					or1.addChild(right);
-					or2.addChild(left.getChild(1));
-					or2.addChild(right);
-					curr.removeChild(left);
-					curr.removeChild(right);
-					curr.addChild(or1);
-					curr.addChild(or2);
-					curr.setName("and");
-					change_happened = true;
+				if(!isAnd(left) && !isAnd(right)) {
+					continue;
 				}
-				// Update left and right in case or has two and children
-				left = curr.getChild(0);
-				right = curr.getChild(1);
-				if(right.getName().equals("and")) {
-					// curr = X||(Y&&Z) will become (X||Y)&&(X||Z)
-					XML or1 = new XML("or");
-					XML or2 = new XML("or");
-					or1.addChild(left);
-					or1.addChild(right.getChild(0));
-					or2.addChild(left);
-					or2.addChild(right.getChild(1));
-					curr.removeChild(left);
-					curr.removeChild(right);
-					curr.addChild(or1);
-					curr.addChild(or2);
-					curr.setName("and");
-					change_happened = true;
-				}
-				// Recurse on same node if any change happened
-				if(change_happened) {
-					any_change_happened = true;
-					distributeOrsoverAndsRecursive(tree);
-				}
+				distributeOverOr(curr);
+				// Recurse on new structure
+				distributeOrsoverAndsRecursive(node);
 			}
-			// Recurse on child if nothing changed
-			if(!any_change_happened) {
-				distributeOrsoverAndsRecursive(curr);
-			}
+			distributeOrsoverAndsRecursive(curr);
 		}
 	}
-		
+	
+	private void distributeOverOr(XML or) {
+		XML left = or.getChild(0);
+		XML right = or.getChild(1);
+		if(isAnd(left)) {
+			// curr = (X&&Y)||Z will become (X||Z)&&(Y||Z)
+			XML and = new XML("and");
+			XML newLeft = createOr(left.getChild(0), right);
+			XML newRight = createOr(left.getChild(1), right);
+			and.addChild(newLeft);
+			and.addChild(newRight);
+			
+			replace_With(or, and);
+		}
+		else if(isAnd(right)) {
+			// curr = X||(Y&&Z) will become (X||Y)&&(X||Z)
+			XML and = new XML("and");
+			XML newLeft = createOr(left, right.getChild(0));
+			XML newRight = createOr(left, right.getChild(1));
+			and.addChild(newLeft);
+			and.addChild(newRight);
+			
+			// TODO: Determine why removing this line breaks the program
+			replace_With(right, newRight);
+			
+			replace_With(or, and);
+		}
+	}
+	
+	private XML createOr(XML left, XML right) {
+		XML or = new XML("or");
+		or.addChild(left);
+		or.addChild(right);
+		return or;
+	}
 	
 	// Cleans up logic in tree in preparation for Resolution:
 	// 1) Converts nested binary ands and ors into n-ary operators so
