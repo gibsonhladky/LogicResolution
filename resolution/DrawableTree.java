@@ -194,7 +194,7 @@ public class DrawableTree
 	// *** DO NOT IMPLEMENT ANY OF THESE METHODS HERE ***
 	public void eliminateBiconditions() {}
 	public void eliminateConditions() {}
-	public void moveNegationInwards() {}
+	public void moveAllNegationsInwards() {}
 	public void distributeOrsOverAnds() {}
 	public void collapse() {}
 	public boolean applyResolution() { return false; }

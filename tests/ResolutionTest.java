@@ -54,25 +54,25 @@ public class ResolutionTest {
 
 	@Test public void removeDoubleNot() {
 		givenInput("!! A");
-		resolution.moveNegationInwards();
+		resolution.moveAllNegationsInwards();
 		assertLogicMatches("A");
 	}
 
 	@Test public void deMorgansOverAnd() {
 		givenInput("!(A && B)");
-		resolution.moveNegationInwards();
+		resolution.moveAllNegationsInwards();
 		assertLogicMatches("(!A) || (!B)");
 	}
 
 	@Test public void deMorgansOverOr() {
 		givenInput("!(A || B)");
-		resolution.moveNegationInwards();
+		resolution.moveAllNegationsInwards();
 		assertLogicMatches("(!A) && (!B)");
 	}
 
 	@Test public void complexMoveNegationInwards() {
 		givenInput("!(A && !(B || !C))");
-		resolution.moveNegationInwards();
+		resolution.moveAllNegationsInwards();
 		assertLogicMatches("!A || (B || !C)");
 	}
 

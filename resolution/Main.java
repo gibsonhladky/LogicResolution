@@ -41,7 +41,7 @@ public class Main extends PApplet
 					break;
 				case '3':
 					status = "Moved Negations Inwards";
-					dtree.moveNegationInwards(); 
+					dtree.moveAllNegationsInwards(); 
 					break;
 				case '4': 
 					status = "Distributed Ors Over Ands";

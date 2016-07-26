@@ -1,5 +1,6 @@
 package resolution;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import processing.core.PApplet;
 import processing.data.XML;
@@ -26,12 +27,11 @@ public class Resolution extends DrawableTree
 	// with truth preserving conjunctions of conditions.
 	private void eliminateBiconditionsRecursive(XML node)
 	{
-		// Base case: leaf node (no children)
 		for(XML child : node.getChildren()) {
 			// Recurse down tree
 			eliminateBiconditionsRecursive(child);
 			if(isBicondition(child)) {
-				decomposeToConditions(child);
+				decomposeBicondition(child);
 			}
 		}
 	}
@@ -41,14 +41,14 @@ public class Resolution extends DrawableTree
 	}
 	
 	// From: A <=> B  To: (A => B) && (B => A)
-	private void decomposeToConditions(XML bicondition) {
+	private void decomposeBicondition(XML bicondition) {
 		bicondition.addChild(getForwardConditionFrom(bicondition));
 		bicondition.addChild(getBackwardConditionFrom(bicondition));
 		
 		bicondition.removeChild(bicondition.getChild(1));
 		bicondition.removeChild(bicondition.getChild(0));
 		
-		bicondition.setName("and"); // from "bicondition"
+		bicondition.setName("and");
 	}
 	
 	// Returns A => B from A <=> B
@@ -78,103 +78,129 @@ public class Resolution extends DrawableTree
 	// Recursively replace conditions with truth preserving disjunctions
 	private void eliminateConditionsRecursive(XML node)
 	{
-		XML[] children = node.getChildren();
-		// Search for conditions
-		// Base Case: leaf node (no children)
-		for(int i = 0; i < children.length; i++) {
-			XML curr = children[i];
-			// Recurse
-			eliminateConditionsRecursive(curr);
-			// Replace condition with truth preserving disjunction
-			if(curr.getName().equals("condition")) {
-				// curr = A=>B will become (!A||B) //
-				// Replace A with (!A)
-				XML not = new XML("not");
-				not.addChild(curr.getChild(0));
-				curr.addChild(not);
-				curr.removeChild(curr.getChild(0));
-				// Change the node from 'condition' to 'or'
-				curr.setName("or");
+		for(XML child : node.getChildren()) {
+			eliminateConditionsRecursive(child);
+			if(isCondition(child)) {
+				decomposeCondition(child);
+				
 			}
 		}
 	}
 	
+	private boolean isCondition(XML node) {
+		return node.getName().equals("condition");
+	}
+	
+	// Returns (A => B) from (B || !A)
+	private void decomposeCondition(XML condition) {
+		// Replace A with (!A)
+		XML not = new XML("not");
+		not.addChild(condition.getChild(0));
+		
+		condition.addChild(not);
+		condition.removeChild(condition.getChild(0));
+		
+		condition.setName("or");
+	}
 	
 	// Move negations in a truth preserving way to apply only to literals.
-	public void moveNegationInwards()
+	public void moveAllNegationsInwards()
 	{
-		moveNegationInwardsRecursive(tree);
+		moveAllNegationsInwardsRecursive(tree);
 		dirtyTree = true; // View changes in Processing window
 	}
 	
 	
 	// Recursively move negations in a truth preserving way to apply only to literals
-	private void moveNegationInwardsRecursive(XML node)
-	{
-		XML[] children = node.getChildren();
+	private void moveAllNegationsInwardsRecursive(XML node) {
 		boolean child_change = false;
 		boolean any_child_changed = false;
-		// Travel down tree searching for not's
-		for(int i = 0; i < children.length; i++) {
-			XML curr = children[i];
+		
+		for(XML curr : node.getChildren()) {
 			any_child_changed = false;
+			
 			// Locate a not node
-			if(curr.getName().equals("not")) {
+			if(isNot(curr)) {
 				child_change = false;
+				
 				// Keep any easy access variable to not's child
-				XML not_child = curr.getChild(0); 
+				XML negatedNode = curr.getChild(0);
+				
 				// Double negative found:
-				if(not_child.getName().equals("not")) {
-					// curr = !!A will become A
-					node.addChild(not_child.getChild(0));
-					// Return formatting for looping
-					if(i == 0) {
-						node.addChild(node.getChild(1));
-						node.removeChild(node.getChild(1));
-					}
-					node.removeChild(node.getChild(i));
-					child_change = true;
+				if(isNot(negatedNode)) {
+					replaceWith(curr, negate(negatedNode));
 				}
 				// DeMorgan's Law:
-				else if(not_child.getName().equals("and")||not_child.getName().equals("or")){
+				else if(isAnd(negatedNode)){
 					// curr = !(A||B) or !(A&&B) will become (!A&&!B) or (!A||!B)
-					XML not1 = new XML("not");
-					XML not2 = new XML("not");
-					// Convert A and B to !A and !B
-					not1.addChild(not_child.getChild(0));
-					not2.addChild(not_child.getChild(1));
-					not_child.removeChild(not_child.getChild(0));
-					not_child.removeChild(not_child.getChild(0));
-					not_child.addChild(not1);
-					not_child.addChild(not2);
-					// DeMorgans law change
-					if(not_child.getName().equals("and")) {
-						not_child.setName("or");
-					}
-					else if(not_child.getName().equals("or")) {
-						not_child.setName("and");
-					}
-					// Remove the not from the tree
-					node.addChild(not_child);
-					// Return formatting for looping
-					if(i == 0) {
-						node.addChild(node.getChild(1));
-						node.removeChild(node.getChild(1));
-					}
-					node.removeChild(node.getChild(i));
+					replaceWith(curr, negate(negatedNode));
 					child_change = true;
 				}
+				else if(isOr(negatedNode)) {
+					// curr = !(A||B) or !(A&&B) will become (!A&&!B) or (!A||!B)
+					replaceWith(curr, negate(negatedNode));
+					child_change = true;
+				}
+				
 				// Recurse if child changed
 				if(child_change) {
 					any_child_changed = true;
-					moveNegationInwardsRecursive(node);
+					moveAllNegationsInwardsRecursive(node);
 				}
 			}
 			// Recurse if nothing changed (avoids recursing on a node twice)
 			if(!any_child_changed){
-				moveNegationInwardsRecursive(curr);
+				moveAllNegationsInwardsRecursive(curr);
 			}
 		}
+	}
+	
+	private void replaceWith(XML child, XML replacement) {
+		child.getParent().addChild(replacement);
+		child.getParent().removeChild(child);
+	}
+	
+	private XML negate(XML node) {
+		if(isNot(node)) {
+			return node.getChild(0);
+		}
+		else if(isAnd(node)) {
+			XML newNode = new XML("or");
+			XML not1 = new XML("not");
+			XML not2 = new XML("not");
+			
+			not1.addChild(node.getChild(0));
+			not2.addChild(node.getChild(1));
+			newNode.addChild(not1);
+			newNode.addChild(not2);
+			
+			return newNode;
+		}
+		else if(isOr(node)) {
+			XML newNode = new XML("and");
+			XML not1 = new XML("not");
+			XML not2 = new XML("not");
+			
+			not1.addChild(node.getChild(0));
+			not2.addChild(node.getChild(1));
+			newNode.addChild(not1);
+			newNode.addChild(not2);
+			
+			return newNode;
+		}
+		return null;
+	}
+	
+	private boolean isNot(XML node) {
+		return node.getName().equals("not");
+	}
+	
+	private boolean isOr(XML node) {
+		return node.getName().equals("or");
+	}
+	
+	private boolean isAnd(XML node) {
+		return node.getName().equals("and");
 	}
 	
 	
