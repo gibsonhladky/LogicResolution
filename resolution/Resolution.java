@@ -82,7 +82,6 @@ public class Resolution extends DrawableTree
 			eliminateConditionsRecursive(child);
 			if(isCondition(child)) {
 				decomposeCondition(child);
-				
 			}
 		}
 	}
@@ -113,44 +112,19 @@ public class Resolution extends DrawableTree
 	
 	// Recursively move negations in a truth preserving way to apply only to literals
 	private void moveAllNegationsInwardsRecursive(XML node) {
-		boolean child_change = false;
-		boolean any_child_changed = false;
-		
-		for(XML curr : node.getChildren()) {
-			any_child_changed = false;
-			
-			// Locate a not node
-			if(isNot(curr)) {
-				child_change = false;
-				
+		for(XML child : node.getChildren()) {
+			if(isNot(child)) {
 				// Keep any easy access variable to not's child
-				XML negatedNode = curr.getChild(0);
-				
-				// Double negative found:
-				if(isNot(negatedNode)) {
-					replaceWith(curr, negate(negatedNode));
+				XML isChildOfNot = child.getChild(0);
+				if(isTerm(isChildOfNot)) {
+					continue;
 				}
-				// DeMorgan's Law:
-				else if(isAnd(negatedNode)){
-					// curr = !(A||B) or !(A&&B) will become (!A&&!B) or (!A||!B)
-					replaceWith(curr, negate(negatedNode));
-					child_change = true;
-				}
-				else if(isOr(negatedNode)) {
-					// curr = !(A||B) or !(A&&B) will become (!A&&!B) or (!A||!B)
-					replaceWith(curr, negate(negatedNode));
-					child_change = true;
-				}
-				
-				// Recurse if child changed
-				if(child_change) {
-					any_child_changed = true;
-					moveAllNegationsInwardsRecursive(node);
-				}
+				replaceWith(child, negate(isChildOfNot));
+				// Recurse on this node again, since the structure has changed
+				moveAllNegationsInwardsRecursive(node);
 			}
-			// Recurse if nothing changed (avoids recursing on a node twice)
-			if(!any_child_changed){
-				moveAllNegationsInwardsRecursive(curr);
+			else {
+				moveAllNegationsInwardsRecursive(child);
 			}
 		}
 	}
@@ -189,6 +163,10 @@ public class Resolution extends DrawableTree
 			return newNode;
 		}
 		return null;
+	}
+	
+	private boolean isTerm(XML node) {
+		return !(isNot(node) || isOr(node) || isAnd(node) || isCondition(node) || isBicondition(node));
 	}
 	
 	private boolean isNot(XML node) {
