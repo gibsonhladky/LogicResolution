@@ -296,30 +296,32 @@ public class Resolution extends DrawableTree {
 	// Guarantees a format of root = logic, with one AND child
 	// that has multiple OR children
 	private void guaranteeFormat() {
-		XML firstNode = this.tree.getChild(0);
-		// Ensure first node is AND
-		if (!firstNode.getName().equals("and")) {
-			XML and = new XML("and");
-			and.addChild(firstNode);
-			this.tree.removeChild(firstNode);
-			this.tree.addChild(and);
-			// Update firstNode after change
-			firstNode = this.tree.getChild(0);
+		ensureFirstNodeIsAnd();
+		XML and = tree.getChild(0);
+		ensureAllChildrenAre("or", and);
+	}
+	
+	private void ensureFirstNodeIsAnd() {
+		XML and = tree.getChild(0);
+		if (!and.getName().equals("and")) {
+			replace_With(and, wrap_With(and, "and"));
 		}
-		// Ensure ANDs children are all OR
-		XML child;
-		for (int i = 0; i < firstNode.getChildCount(); i++) {
-			child = firstNode.getChild(i);
-			if (!child.getName().equals("or")) {
-				XML newNode = new XML("or");
-				newNode.addChild(child);
-				firstNode.removeChild(child);
-				firstNode.addChild(newNode);
-				i--;
+	}
+	
+	private void ensureAllChildrenAre(String childType, XML node) {
+		for(XML child : node.getChildren()) {
+			if (!child.getName().equals(childType)) {
+				replace_With(child, wrap_With(child, childType));
 			}
 		}
 	}
-
+	
+	private XML wrap_With(XML node, String wrapperType) {
+		XML wrapper = new XML(wrapperType);
+		wrapper.addChild(node);
+		return wrapper;
+	}
+	
 	// Removes redundant literals from all clauses, then removes
 	// any redundant clauses
 	private void removeRedundancy(XML set) {
