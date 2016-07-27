@@ -80,15 +80,15 @@ public class ResolutionTest {
 	}
 
 	@Test public void simpleDistributeOrsOverAnds() {
-		givenInput("(A && B) || C");
-		resolution.distributeOrsOverAnds();
-		assertLogicMatches("(A || C) && (B || C)");
-	}
-
-	@Test public void complexDistributeOrsOverAnds() {
 		givenInput("(!A && B) || (B && C)");
 		resolution.distributeOrsOverAnds();
 		assertLogicMatches("((!A || B) && (!A || C)) && ((B || B) && (B || C))");
+	}
+
+	@Test public void complexDistributeOrsOverAnds() {
+		givenInput("((A && B) || C) || (C && D)");
+		resolution.distributeOrsOverAnds();
+		assertLogicMatches("(((A || C) || C) && ((B || C) || C)) && (((A || C) || D) && ((B || C) || D))");
 	}
 	
 	@Test public void simpleCollapse() {
