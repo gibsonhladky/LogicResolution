@@ -85,8 +85,7 @@ public class ResolutionTest {
 		assertLogicMatches("((!A || B) && (!A || C)) && ((B || B) && (B || C))");
 	}
 
-<<<<<<< HEAD
-	public void complexDistributeOrsOverAnds() {
+	@Test public void complexDistributeOrsOverAnds() {
 		givenInput("((A && B) || C) || (C && D)");
 		// ((A && B) || C) || (C && D)
 		// (((A && B) || C) || C) && (((A && B) || C) || D)

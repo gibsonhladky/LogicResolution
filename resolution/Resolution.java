@@ -193,18 +193,21 @@ public class Resolution extends DrawableTree
 	// Recursively move negations in a truth preserving way to apply only to literals
 	private void distributeOrsoverAndsRecursive(XML node) {	
 		for(XML curr : node.getChildren()) {
-			if(isOr(curr)) {
-				XML left = curr.getChild(0);
-				XML right = curr.getChild(1);
-				if(!isAnd(left) && !isAnd(right)) {
-					continue;
-				}
+			if(isDistributableOver(curr)) {
 				distributeOverOr(curr);
-				// Recurse on new structure
-				distributeOrsoverAndsRecursive(node);
+				distributeOrsoverAndsRecursive(node); // Recurse on new structure
 			}
 			distributeOrsoverAndsRecursive(curr);
 		}
+	}
+	
+	private boolean isDistributableOver(XML node) {
+		if(isOr(node)) {
+			XML left = node.getChild(0);
+			XML right = node.getChild(1);
+			return isAnd(left) || isAnd(right);
+		}
+		return false;
 	}
 	
 	private void distributeOverOr(XML or) {
@@ -212,26 +215,21 @@ public class Resolution extends DrawableTree
 		XML right = or.getChild(1);
 		if(isAnd(left)) {
 			// curr = (X&&Y)||Z will become (X||Z)&&(Y||Z)
-			XML and = new XML("and");
 			XML newLeft = createOr(left.getChild(0), right);
 			XML newRight = createOr(left.getChild(1), right);
-			and.addChild(newLeft);
-			and.addChild(newRight);
-			
-			replace_With(or, and);
+
+			replace_With(left, newLeft);
+			replace_With(right, newRight);
+			or.setName("and");
 		}
 		else if(isAnd(right)) {
 			// curr = X||(Y&&Z) will become (X||Y)&&(X||Z)
-			XML and = new XML("and");
 			XML newLeft = createOr(left, right.getChild(0));
 			XML newRight = createOr(left, right.getChild(1));
-			and.addChild(newLeft);
-			and.addChild(newRight);
 			
-			// TODO: Determine why removing this line breaks the program
+			replace_With(left, newLeft);
 			replace_With(right, newRight);
-			
-			replace_With(or, and);
+			or.setName("and");
 		}
 	}
 	
