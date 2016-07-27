@@ -107,12 +107,6 @@ public class ResolutionTest {
 		assertCollapsedLogicMatches("<logic><and><or><A/><B/><C/></or><or><D/><E/></or><or><F/></or></and></logic>");
 	}
 	
-	@Test public void collapseWrapsLiteralsWithOr() {
-		givenInput("A && B && C");
-		resolution.collapse();
-		assertCollapsedLogicMatches("<logic><and><or><A/></or><or><B/></or><or><C/></or></and></logic>");
-	}
-	
 	@Test public void applyResolutionDetectsSimpleConflict() {
 		givenInput("(A) && (!A)");
 		resolution.collapse();
