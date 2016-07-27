@@ -242,7 +242,7 @@ public class Resolution extends DrawableTree {
 	public void collapse() {
 		unnestLogic();
 
-		guaranteeFormat();
+		addMissingLogicNodes();
 
 		removeRedundancy(tree.getChild(0));
 
@@ -293,29 +293,31 @@ public class Resolution extends DrawableTree {
 		parent.removeChild(child);
 	}
 	
-	// Guarantees a format of root = logic, with one AND child
-	// that has multiple OR children
-	private void guaranteeFormat() {
-		XML firstNode = this.tree.getChild(0);
-		// Ensure first node is AND
-		if (!firstNode.getName().equals("and")) {
-			XML and = new XML("and");
-			and.addChild(firstNode);
-			this.tree.removeChild(firstNode);
-			this.tree.addChild(and);
-			// Update firstNode after change
-			firstNode = this.tree.getChild(0);
+	// Adds nodes to the hierarchy to enforce the structure of
+	// AND as the only child of the root, and every child of AND
+	// is an OR of literals
+	// Assumes that logic has been decomposed and unnested
+	private void addMissingLogicNodes() {
+		wrapOr();
+		wrapLiterals();
+	}
+
+	// Ensures first node is AND
+	private void wrapOr() {
+		XML firstNode = tree.getChild(0);
+		if (!isAnd(firstNode)) {
+			firstNode.addChild(firstNode);
+			firstNode.setName("and");
 		}
-		// Ensure ANDs children are all OR
-		XML child;
-		for (int i = 0; i < firstNode.getChildCount(); i++) {
-			child = firstNode.getChild(i);
-			if (!child.getName().equals("or")) {
-				XML newNode = new XML("or");
-				newNode.addChild(child);
-				firstNode.removeChild(child);
-				firstNode.addChild(newNode);
-				i--;
+	}
+
+	// Ensure ANDs children are all OR
+	private void wrapLiterals() {
+		XML firstNode = tree.getChild(0);
+		for (XML child : firstNode.getChildren()) {
+			if (!isOr(child)) {
+				child.addChild(child);
+				child.setName("or");
 			}
 		}
 	}
