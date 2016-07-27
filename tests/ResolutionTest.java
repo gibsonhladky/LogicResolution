@@ -1,6 +1,8 @@
 package tests;
 
 import static org.junit.Assert.*;
+import static tests.XMLMatcher.equivalentTo;
+import static org.hamcrest.CoreMatchers.*;
 
 import org.junit.Test;
 
@@ -14,6 +16,7 @@ public class ResolutionTest {
 	PApplet applet = new PApplet();
 
 	Resolution resolution;
+	
 	XML actual;
 
 	@Test public void simpleBiconditionalEliminated() {
@@ -128,12 +131,14 @@ public class ResolutionTest {
 
 	// XML's equals() method is not implemented, but it's toString() is, so
 	// matching strings is a simple work around to checking equals.
-	private void assertLogicMatches(String expected) {
-		assertEquals(LogicParser.toXML(expected).toString(), actual.toString());
+	private void assertLogicMatches(String expectedString) {
+		XML expected = LogicParser.toXML(expectedString);
+		assertThat(actual, is(equivalentTo(expected)));
 	}
 	
-	private void assertCollapsedLogicMatches(String expected) {
-		assertEquals(expected, actual.toString());
+	private void assertCollapsedLogicMatches(String expectedString) {
+		XML expected = new PApplet().parseXML(expectedString);
+		assertThat(actual, is(equivalentTo(expected)));
 	}
 
 }
