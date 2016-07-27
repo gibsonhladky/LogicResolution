@@ -96,9 +96,9 @@ public class ResolutionTest {
 	}
 	
 	@Test public void simpleCollapse() {
-		givenInput("(A || B) && ((B || C) && (A || C))");
+		givenInput("(A || B) && ((B || C) && A)");
 		resolution.collapse();
-		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><B/><C/></or><or><A/><C/></or></and></logic>");
+		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><B/><C/></or><or><A/></or></and></logic>");
 	}
 	
 	@Test public void applyResolutionDetectsSimpleConflict() {
@@ -108,25 +108,70 @@ public class ResolutionTest {
 	}
 	
 	@Test public void applyResolutionDetectsComplexConflict() {
-		givenInput("(A || B || !C) && (A || !B) && (!A || C)");
+		givenInput("(!A || C) && (!B || C) && (A || B) && !C");
 		resolution.collapse();
 		assertTrue(resolution.applyResolution());
+		assertCollapsedLogicMatches(""
+				+ "<logic>"
+				+ 	"<and>"
+				+ 		"<or>"
+				+ 			"<not><A/></not>"
+				+ 			"<C/>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<not><B/></not>"
+				+ 			"<C/>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<A/>"
+				+ 			"<B/>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<not><C/></not>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<B/>"
+				+ 			"<C/>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<not><A/></not>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<A/>"
+				+ 			"<C/>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<not><B/></not>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<C/>"
+				+ 		"</or>"
+				+ 	"</and>"
+				+ "</logic>");
 	}
 	
 	@Test public void applyResolutionFindsNoConflicts() {
 		givenInput("(A || B || !C) && (A || !B) && (A || C)");
 		resolution.collapse();
 		assertFalse(resolution.applyResolution());
+		assertCollapsedLogicMatches("<logic><and><or><A/><B/><not><C/></not></or><or><A/><not><B/></not></or><or><A/><C/></or>"
+				+ "<or><A/><not><C/></not></or><or><A/><B/></or>"
+				+ "<or><A/></or></and></logic>");
 	}
 	
 	@Test public void applyResolutionFindsNoResolvents() {
 		givenInput("(A || B) && (A || C)");
 		resolution.collapse();
+		assertFalse(resolution.applyResolution());
 		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><A/><C/></or></and></logic>");
 	}
-
-	// TODO: Test for applyResolution adding resolvents to the tree
-	// TODO: Figure out what resolvents are...
+	
+	@Test public void applyResolutionFindsSimpleResolvent() {
+		givenInput("(A || B) && (!A || C)");
+		resolution.collapse();
+		assertFalse(resolution.applyResolution());
+		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><not><A/></not><C/></or><or><B/><C/></or></and></logic>");
+	}
 	
 	private void givenInput(String input) {
 		actual = LogicParser.toXML(input);
