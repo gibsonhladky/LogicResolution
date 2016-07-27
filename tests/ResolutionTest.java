@@ -101,6 +101,12 @@ public class ResolutionTest {
 		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or><or><B/><C/></or><or><A/></or></and></logic>");
 	}
 	
+	@Test public void complexCollapse() {
+		givenInput("(A || B || C) && (D || E) && F");
+		resolution.collapse();
+		assertCollapsedLogicMatches("<logic><and><or><A/><B/><C/></or><or><D/><E/></or><or><F/></or></and></logic>");
+	}
+	
 	@Test public void applyResolutionDetectsSimpleConflict() {
 		givenInput("(A) && (!A)");
 		resolution.collapse();

@@ -240,7 +240,7 @@ public class Resolution extends DrawableTree {
 	// 3) Removes any clauses that are always true (tautologies)
 	// from the tree to help speed up resolution.
 	public void collapse() {
-		unnestAndsOrs(tree.getChild(0));
+		unnestLogic();
 
 		guaranteeFormat();
 
@@ -250,57 +250,49 @@ public class Resolution extends DrawableTree {
 
 		dirtyTree = true;
 	}
+	
+	// Calls the recursive function starting at the root of the tree
+	private void unnestLogic() {
+		unnestLogic(tree);
+	}
 
-	// Converts binary AND/OR nodes to multi-child nodes.
-	// Assumes ORs have been distributed over ANDs for proper function
-	private void unnestAndsOrs(XML node) {
-		XML child;
-		boolean changed = false;
-		if (node.getName().equals("and")) {
-			// Compress AND nodes
-			for (int i = 0; i < node.getChildCount(); i++) {
-				child = node.getChild(i);
-				if (child.getName().equals("and")) {
-					// Move children from secondary AND to primary AND
-					for (int j = 0; j < child.getChildCount(); j++) {
-						node.addChild(child.getChild(j));
-					}
-					// Remove secondary AND
-					node.removeChild(child);
-					// Flag node as changed
-					changed = true;
-				}
-			}
-
+	// Compresses the logic to a single AND with multiple OR children.
+	// Each OR has only literal children.
+	// Assumes that the nodes have been decomposed correctly
+	private void unnestLogic(XML node) {
+		while(hasChildWithMatchingName(node)){
+			compressNode(node);
 		}
-		else if (node.getName().equals("or")) {
-			// Compress OR nodes
-			for (int i = 0; i < node.getChildCount(); i++) {
-				child = node.getChild(i);
-				if (child.getName().equals("or")) {
-					// Move children from secondary OR to primary OR
-					for (int j = 0; j < child.getChildCount(); j++) {
-						node.addChild(child.getChild(j));
-					}
-					// Remove secondary OR
-					node.removeChild(child);
-					// Flag node as changed
-					changed = true;
-				}
+		for(XML child : node.getChildren()) {
+			unnestLogic(child);
+		}
+	}
+	
+	private boolean hasChildWithMatchingName(XML node) {
+		for(XML child : node.getChildren()) {
+			if(child.getName().equals(node.getName())) {
+				return true;
 			}
 		}
-		// Recurse on same node if tree has changed
-		if (changed) {
-			unnestAndsOrs(node);
-		}
-		// Recurse on all children if tree hasn't changed
-		if (!changed) {
-			for (int i = 0; i < node.getChildCount(); i++) {
-				unnestAndsOrs(node.getChild(i));
+		return false;
+	}
+	
+	private void compressNode(XML node) {
+		for (XML child : node.getChildren()) {
+			if (child.getName().equals(node.getName())) {
+				replaceChildWithGrandchildren(child);
 			}
 		}
 	}
-
+	
+	private void replaceChildWithGrandchildren(XML child) {
+		XML parent = child.getParent();
+		for (XML grandchild : child.getChildren()) {
+			parent.addChild(grandchild);
+		}
+		parent.removeChild(child);
+	}
+	
 	// Guarantees a format of root = logic, with one AND child
 	// that has multiple OR children
 	private void guaranteeFormat() {
