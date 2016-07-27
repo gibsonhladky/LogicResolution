@@ -210,27 +210,26 @@ public class Resolution extends DrawableTree
 		return false;
 	}
 	
+	// Distributes an AND over the OR node, restructuring the tree
+	// in a truth preserving manner, and replacing the OR node with AND.
 	private void distributeOverOr(XML or) {
 		XML left = or.getChild(0);
 		XML right = or.getChild(1);
+		XML newLeft;
+		XML newRight;
 		if(isAnd(left)) {
 			// curr = (X&&Y)||Z will become (X||Z)&&(Y||Z)
-			XML newLeft = createOr(left.getChild(0), right);
-			XML newRight = createOr(left.getChild(1), right);
-
-			replace_With(left, newLeft);
-			replace_With(right, newRight);
-			or.setName("and");
+			newLeft = createOr(left.getChild(0), right);
+			newRight = createOr(left.getChild(1), right);
 		}
-		else if(isAnd(right)) {
+		else {
 			// curr = X||(Y&&Z) will become (X||Y)&&(X||Z)
-			XML newLeft = createOr(left, right.getChild(0));
-			XML newRight = createOr(left, right.getChild(1));
-			
-			replace_With(left, newLeft);
-			replace_With(right, newRight);
-			or.setName("and");
+			newLeft = createOr(left, right.getChild(0));
+			newRight = createOr(left, right.getChild(1));
 		}
+		replace_With(left, newLeft);
+		replace_With(right, newRight);
+		or.setName("and");
 	}
 	
 	private XML createOr(XML left, XML right) {
