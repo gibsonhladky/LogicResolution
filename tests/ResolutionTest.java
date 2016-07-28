@@ -125,6 +125,30 @@ public class ResolutionTest {
 		assertCollapsedLogicMatches("<logic><and><or><A/></or></and></logic>");
 	}
 	
+	@Test public void collapseRemovesRedundantLiteralsInClauses() {
+		givenInput("(A || A) && (A || B || A) && (B || B || C || C)");
+		resolution.collapse();
+		assertCollapsedLogicMatches("<logic><and><or><A/></or><or><A/><B/></or><or><B/><C/></or></and></logic>");
+	}
+	
+	@Test public void collapseRemovesRedundantClauses() {
+		givenInput("(A || B) && (B || A) && (A || B)");
+		resolution.collapse();
+		assertCollapsedLogicMatches("<logic><and><or><A/><B/></or></and></logic>");
+	}
+	
+	@Test public void collapseRemovesSimpleTautology() {
+		givenInput("(A || !A) && B");
+		resolution.collapse();
+		assertCollapsedLogicMatches("<logic><and><or><B/></or></and></logic>");
+	}
+	
+	@Test public void collapseRemovesComplexTautology() {
+		givenInput("(A || B || !A) && D && (B || C || !C) && (!C || C || B)");
+		resolution.collapse();
+		assertCollapsedLogicMatches("<logic><and><or><D/></or></and></logic>");
+	}
+	
 	@Test public void applyResolutionDetectsSimpleConflict() {
 		givenInput("A && !A");
 		resolution.collapse();

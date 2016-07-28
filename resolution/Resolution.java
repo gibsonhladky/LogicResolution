@@ -1,6 +1,8 @@
 package resolution;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import processing.core.PApplet;
 import processing.data.XML;
@@ -241,13 +243,9 @@ public class Resolution extends DrawableTree {
 	// from the tree to help speed up resolution.
 	public void collapse() {
 		unnestLogic();
-
 		guaranteeFormat();
-
 		removeRedundancy(tree.getChild(0));
-
 		removeTautologies(tree.getChild(0));
-
 		dirtyTree = true;
 	}
 	
@@ -325,62 +323,58 @@ public class Resolution extends DrawableTree {
 	// Removes redundant literals from all clauses, then removes
 	// any redundant clauses
 	private void removeRedundancy(XML set) {
-		// Remove redundant literals from each clause:
-		for (int i = 0; i < set.getChildCount(); i++) {
-			removeRedundantLiterals(set.getChild(i));
+		for (XML clause : set.getChildren()) {
+			removeRedundantLiteralsIn(clause);
 		}
-		// Remove redundant clauses
-		XML tempClause;
-		ArrayList<XML> testedClauses = new ArrayList<XML>();
-		for (int i = 0; i < set.getChildCount(); i++) {
-			// Remove clauses from the tree one at a time to test
-			// against remaining clauses. Store the clauses in an
-			// ArrayList to be added back to the tree if they are
-			// not redundant
-			tempClause = set.getChild(i);
-			testedClauses.add(set.getChild(i));
-			set.removeChild(set.getChild(i));
-			// Remove redundant clauses
-			if (setContainsClause(set, tempClause)) {
-				testedClauses.remove(tempClause);
-			}
-			i--; // Account for child deletion
-		}
-		// Add back all non-redundant clauses
-		for (int i = 0; i < testedClauses.size(); i++) {
-			set.addChild(testedClauses.get(i));
-		}
+		removeRedundantClauses(set);
+		
 	}
 
 	// Removes all redundant literals from a clause
-	private void removeRedundantLiterals(XML clause) {
-		XML l1, l2; // Two literals
-		// Compare all literals in the clause
+	private void removeRedundantLiteralsIn(XML clause) {
 		for (int i = 0; i < clause.getChildCount(); i++) {
-			l1 = clause.getChild(i);
-			for (int j = i + 1; j < clause.getChildCount(); j++) {
-				l2 = clause.getChild(j);
-				// Remove matching literals
-				if (getAtomFromLiteral(l1).equals(getAtomFromLiteral(l2))) {
-					if (isLiteralNegated(l1) == isLiteralNegated(l2)) {
-						clause.removeChild(l2);
-						j--; // Account for node deletion
-						// Do not need to decrement i because
-						// j > i always.
-					}
-				}
+			removeMultiplesOfLiteralInClause(clause.getChild(i), clause);
+		}
+	}
+	
+	// TODO: Finish refactoring for clarification
+	private void removeMultiplesOfLiteralInClause(XML literal, XML clause) {
+		int startIndex = Arrays.asList(clause.getChildren()).indexOf(literal);
+		for(int i = startIndex + 1; i < clause.getChildren().length; i++) {
+			XML child = clause.getChild(i);
+			if(literalsMatch(child, literal)) {
+				clause.removeChild(child);
+				i--; // Account for node deletion
+				// Do not need to decrement i because
+				// j > i always.
 			}
 		}
 	}
+	
+	private boolean literalsMatch(XML actual, XML expected) {
+		return getAtomFromLiteral(actual).equals(getAtomFromLiteral(expected)) &&
+				(isLiteralNegated(actual) == isLiteralNegated(expected));
+	}
+	
+	// TODO: Finish refactoring for clarification
+	private void removeRedundantClauses(XML set) {
+		ArrayList<XML> nonRedundantClauses = new ArrayList<XML>();
+		for (XML tempClause : set.getChildren()) {
+			set.removeChild(tempClause);
+			if (!setContainsClause(set, tempClause)) {
+				nonRedundantClauses.add(tempClause);
+			}
+		}
+		// Add back all non-redundant clauses
+		for (int i = 0; i < nonRedundantClauses.size(); i++) {
+			set.addChild(nonRedundantClauses.get(i));
+		}
+	}
 
-	// Removes any tautologies in a set
 	private void removeTautologies(XML set) {
-		XML clause;
-		for (int i = 0; i < set.getChildCount(); i++) {
-			clause = set.getChild(i);
+		for (XML clause : set.getChildren()) {
 			if (clauseIsTautology(clause)) {
 				set.removeChild(clause);
-				i--;
 			}
 		}
 	}
@@ -465,7 +459,7 @@ public class Resolution extends DrawableTree {
 		if (inverses == 0) {
 			return null;
 		}
-		removeRedundantLiterals(resolvent);
+		removeRedundantLiteralsIn(resolvent);
 		return resolvent;
 	}
 
