@@ -2,7 +2,6 @@ package resolution;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import processing.core.PApplet;
 import processing.data.XML;
@@ -351,11 +350,6 @@ public class Resolution extends DrawableTree {
 		}
 	}
 	
-	private boolean literalsMatch(XML actual, XML expected) {
-		return getAtomFromLiteral(actual).equals(getAtomFromLiteral(expected)) &&
-				(isLiteralNegated(actual) == isLiteralNegated(expected));
-	}
-	
 	// TODO: Finish refactoring for clarification
 	private void removeRedundantClauses(XML set) {
 		ArrayList<XML> nonRedundantClauses = new ArrayList<XML>();
@@ -385,19 +379,17 @@ public class Resolution extends DrawableTree {
 	// only returns false after exploring all possible resolvents.
 	public boolean applyResolution() {
 		XML set = tree.getChild(0);
-		XML clause1, clause2, resolvent;
 		boolean updated = true;
+		boolean conflict = false;
 
 		// Continue iterating until no more resolvents are found
 		while (updated) {
 			updated = false;
 			// Compare all pairs of clauses to create new resolvents
-			for (int i = 0; i < set.getChildCount(); i++) {
-				clause1 = set.getChild(i);
-				for (int j = i + 1; j < set.getChildCount(); j++) {
-					clause2 = set.getChild(j);
-					// Generate a resolvent from two clauses
-					resolvent = resolve(clause1, clause2);
+			for (XML clause1 : set.getChildren()) {
+				for (XML clause2 : set.getChildren()) {
+					
+					XML resolvent = resolve(clause1, clause2);
 					if (resolvent == null) {
 						// Do nothing, clauses could not be resolved
 					}
@@ -405,19 +397,17 @@ public class Resolution extends DrawableTree {
 						// Add new valid non-duplicate resolvents
 						if (!setContainsClause(set, resolvent)) {
 							set.addChild(resolvent);
-							updated = true; // Flag tree as updated
+							updated = true;
 						}
 					}
 					else {
-						// Conflict found!
-						dirtyTree = true;
-						return true;
+						conflict = true;
 					}
 				}
 			}
 		}
 		dirtyTree = true;
-		return false;
+		return conflict;
 	}
 
 	// Attempts to resolve two clauses and return the resulting
@@ -426,19 +416,17 @@ public class Resolution extends DrawableTree {
 	// returns an XML node with zero children. If the two clauses cannot
 	// be resolved,returns null.
 	private XML resolve(XML clause1, XML clause2) {
-		XML lit; // A literal
 		XML resolvent = new XML("or");
 		int inverses = 0; // A count of inverses found (i.e. A and !A)
 		// Iterate over the first clause's literals
-		for (int i = 0; i < clause1.getChildCount(); i++) {
-			lit = clause1.getChild(i);
+		for (XML literal : clause1.getChildren()) {
 			// Maintain a count of inverse literals
-			if (clauseContainsLiteral(clause2, getAtomFromLiteral(lit), !isLiteralNegated(lit))) {
+			if (clauseContainsInverseOfLiteral(clause2, literal)) {
 				inverses++;
 			}
 			// Add non-inverse literals to the resolvent
 			else {
-				resolvent.addChild(lit);
+				resolvent.addChild(literal);
 			}
 		}
 		// If all literals are inverses, send back conflict XML node
@@ -447,11 +435,10 @@ public class Resolution extends DrawableTree {
 		}
 		// Iterate over second clause's literals
 		// This creates redundant literals in resolvent, which is handled later
-		for (int i = 0; i < clause2.getChildCount(); i++) {
-			lit = clause2.getChild(i);
+		for (XML literal : clause2.getChildren()) {
 			// Add non-conflicting literals to the resolvent
-			if (!clauseContainsLiteral(clause1, getAtomFromLiteral(lit), !isLiteralNegated(lit))) {
-				resolvent.addChild(lit);
+			if (!clauseContainsInverseOfLiteral(clause1, literal)) {
+				resolvent.addChild(literal);
 			}
 		}
 		// NOTE: You need at least one inverse to make a resolvent
@@ -478,15 +465,11 @@ public class Resolution extends DrawableTree {
 		if (literal.getName().equals("not")) {
 			return true;
 		}
-		else if (literal.getParent().getName().equals("not")) {
-			// Implemented for robustness
-			return true;
-		}
 		return false;
 	}
 
 	// Returns the name of the atom in literal as a string.
-	private String getAtomFromLiteral(XML literal) {
+	private String atomOf(XML literal) {
 		if (literal.getName().equals("not")) {
 			return literal.getChild(0).getName();
 		}
@@ -495,58 +478,61 @@ public class Resolution extends DrawableTree {
 
 	// Returns true when the provided clause contains a literal
 	// with the atomic name and negation (isNegated). Otherwise, returns false.
-	private boolean clauseContainsLiteral(XML clause, String atom, boolean isNegated) {
-		XML child;
-		// Check all children of clause for the provided literal
-		for (int i = 0; i < clause.getChildCount(); i++) {
-			child = clause.getChild(i);
-			if (isLiteralNegated(child) == isNegated && getAtomFromLiteral(child).equals(atom)) {
+	private boolean clauseContainsLiteral(XML clause, XML literal) {
+		for (XML child : clause.getChildren()) {
+			if (isLiteralNegated(child) == isLiteralNegated(literal) && atomOf(child).equals(atomOf(literal))) {
 				return true;
 			}
 		}
 		return false;
 	}
-
-	// Returns true when the set contains a clause with the
-	// same set of literals as the clause parameter. Otherwise, returns false.
-	private boolean setContainsClause(XML set, XML clause) {
-		boolean negated;
-		boolean isClause = true;
-		// Check all children of set
-		for (int i = 0; i < set.getChildCount(); i++) {
-			XML test_clause = set.getChild(i);
-			isClause = true;
-			// Test for clauses with same and extra literals
-			if (clause.getChildCount() != test_clause.getChildCount()) {
-				isClause = false;
-			}
-			// Check for all matching children between clauses
-			for (int j = 0; j < clause.getChildCount(); j++) {
-				negated = isLiteralNegated(clause.getChild(j));
-				if (!clauseContainsLiteral(test_clause, getAtomFromLiteral(clause.getChild(j)), negated)) {
-					isClause = false;
-				}
-			}
-			if (isClause) {
+	
+	private boolean clauseContainsInverseOfLiteral(XML clause, XML literal) {
+		for (XML child : clause.getChildren()) {
+			if (isLiteralNegated(child) != isLiteralNegated(literal) && atomOf(child).equals(atomOf(literal))) {
 				return true;
 			}
 		}
 		return false;
+	}
+	
+	private boolean literalsMatch(XML actual, XML expected) {
+		return atomOf(actual).equals(atomOf(expected)) && 
+				isLiteralNegated(actual) == isLiteralNegated(expected);
+	}
+
+	// Returns true when the set contains a clause with the
+	// same set of literals as the clause parameter. Otherwise, returns false.
+	private boolean setContainsClause(XML set, XML clauseToMatch) {
+		for (XML actualClause : set.getChildren()) {
+			if(clausesMatch(actualClause, clauseToMatch)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean clausesMatch(XML actualClause, XML expectedClause) {
+		if(actualClause.getChildCount() != expectedClause.getChildCount()) {
+			return false;
+		}
+		for(XML expectedLiteral : expectedClause.getChildren()) {
+			if (!clauseContainsLiteral(actualClause, expectedLiteral)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	// Returns true when this clause contains a literal,
 	// along with the negated form of that same literal.
 	// Otherwise, returns false.
 	private boolean clauseIsTautology(XML clause) {
-		XML literal;
-		// Iterate over all children of clause
-		for (int i = 0; i < clause.getChildCount(); i++) {
-			literal = clause.getChild(i);
-			if (clauseContainsLiteral(clause, getAtomFromLiteral(literal), !isLiteralNegated(literal))) {
+		for (XML literal : clause.getChildren()) {
+			if (clauseContainsInverseOfLiteral(clause, literal)) {
 				return true;
 			}
 		}
-
 		return false;
 	}
 

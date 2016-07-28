@@ -156,7 +156,7 @@ public class ResolutionTest {
 	}
 	
 	@Test public void applyResolutionDetectsComplexConflict() {
-		givenInput("(!A || C) && (!B || C) && (A || B) && !C");
+		givenInput("(!A || C) && ((!B || C) && ((A || B) && !C))");
 		resolution.collapse();
 		assertTrue(resolution.applyResolution());
 		assertCollapsedLogicMatches(""
@@ -193,6 +193,12 @@ public class ResolutionTest {
 				+ 		"</or>"
 				+ 		"<or>"
 				+ 			"<C/>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<B/>"
+				+ 		"</or>"
+				+ 		"<or>"
+				+ 			"<A/>"
 				+ 		"</or>"
 				+ 	"</and>"
 				+ "</logic>");
