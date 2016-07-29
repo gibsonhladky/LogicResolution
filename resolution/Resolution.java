@@ -1,11 +1,18 @@
 package resolution;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import processing.core.PApplet;
 import processing.data.XML;
 
+// Definitions for naming conventions used.
+// atom: a single named proposition with no children independent of whether
+// it is negated
+// literal: either an atom-node containing a name, or a not-node with that
+// atom as a child
+// clause: an or-node, all the children of which are literals
+// set: an and-node, all the children of which are clauses (disjunctions)
+// Tautology: a clause that is always true
 public class Resolution extends DrawableTree {
 	public Resolution(PApplet p, XML tree) {
 		super(p);
@@ -111,7 +118,7 @@ public class Resolution extends DrawableTree {
 				if (isTerm(grandchild)) {
 					continue;
 				}
-				replace_With(child, negate(grandchild));
+				replaceChildWith(child, negate(grandchild));
 				// Recurse on this node again, since the structure has changed
 				moveAllNegationsInwardsRecursive(node);
 			}
@@ -121,7 +128,7 @@ public class Resolution extends DrawableTree {
 		}
 	}
 
-	private void replace_With(XML child, XML replacement) {
+	private void replaceChildWith(XML child, XML replacement) {
 		child.getParent().addChild(replacement);
 		child.getParent().removeChild(child);
 	}
@@ -156,22 +163,6 @@ public class Resolution extends DrawableTree {
 			return newNode;
 		}
 		return null;
-	}
-
-	private boolean isTerm(XML node) {
-		return !( isNot(node) || isOr(node) || isAnd(node) || isCondition(node) || isBicondition(node) );
-	}
-
-	private boolean isNot(XML node) {
-		return node.getName().equals("not");
-	}
-
-	private boolean isOr(XML node) {
-		return node.getName().equals("or");
-	}
-
-	private boolean isAnd(XML node) {
-		return node.getName().equals("and");
 	}
 
 	// Move negations in a truth preserving way to apply only to literals.
@@ -219,8 +210,8 @@ public class Resolution extends DrawableTree {
 			newLeft = createOr(left, right.getChild(0));
 			newRight = createOr(left, right.getChild(1));
 		}
-		replace_With(left, newLeft);
-		replace_With(right, newRight);
+		replaceChildWith(left, newLeft);
+		replaceChildWith(right, newRight);
 		or.setName("and");
 	}
 
@@ -241,18 +232,13 @@ public class Resolution extends DrawableTree {
 	// 3) Removes any clauses that are always true (tautologies)
 	// from the tree to help speed up resolution.
 	public void collapse() {
-		unnestLogic();
+		unnestLogic(tree);
 		guaranteeFormat();
 		removeRedundancy(tree.getChild(0));
 		removeTautologies(tree.getChild(0));
 		dirtyTree = true;
 	}
 	
-	// Calls the recursive function starting at the root of the tree
-	private void unnestLogic() {
-		unnestLogic(tree);
-	}
-
 	// Compresses the logic to a single AND with multiple OR children.
 	// Each OR has only literal children.
 	// Assumes that the nodes have been decomposed correctly
@@ -299,21 +285,21 @@ public class Resolution extends DrawableTree {
 	}
 	
 	private void ensureFirstNodeIsAnd() {
-		XML and = tree.getChild(0);
-		if (!and.getName().equals("and")) {
-			replace_With(and, wrap_With(and, "and"));
+		XML firstNode = tree.getChild(0);
+		if (!firstNode.getName().equals("and")) {
+			replaceChildWith(firstNode, wrapWith("and", firstNode));
 		}
 	}
 	
 	private void ensureAllChildrenAre(String childType, XML node) {
 		for(XML child : node.getChildren()) {
 			if (!child.getName().equals(childType)) {
-				replace_With(child, wrap_With(child, childType));
+				replaceChildWith(child, wrapWith(childType, child));
 			}
 		}
 	}
 	
-	private XML wrap_With(XML node, String wrapperType) {
+	private XML wrapWith(String wrapperType, XML node) {
 		XML wrapper = new XML(wrapperType);
 		wrapper.addChild(node);
 		return wrapper;
@@ -336,18 +322,31 @@ public class Resolution extends DrawableTree {
 		}
 	}
 	
-	// TODO: Finish refactoring for clarification
 	private void removeMultiplesOfLiteralInClause(XML literal, XML clause) {
-		int startIndex = Arrays.asList(clause.getChildren()).indexOf(literal);
-		for(int i = startIndex + 1; i < clause.getChildren().length; i++) {
-			XML child = clause.getChild(i);
-			if(literalsMatch(child, literal)) {
+		for(XML child : clause.getChildren()) {
+			if(literalsMatch(child, literal) && !child.equals(literal)) {
 				clause.removeChild(child);
-				i--; // Account for node deletion
-				// Do not need to decrement i because
-				// j > i always.
 			}
 		}
+	}
+	
+	private boolean literalsMatch(XML actual, XML expected) {
+		return atomOf(actual).equals(atomOf(expected)) && 
+				isLiteralNegated(actual) == isLiteralNegated(expected);
+	}
+	
+	private String atomOf(XML literal) {
+		if (literal.getName().equals("not")) {
+			return literal.getChild(0).getName();
+		}
+		return literal.getName();
+	}
+	
+	private boolean isLiteralNegated(XML literal) {
+		if (literal.getName().equals("not")) {
+			return true;
+		}
+		return false;
 	}
 	
 	// TODO: Finish refactoring for clarification
@@ -365,6 +364,36 @@ public class Resolution extends DrawableTree {
 		}
 	}
 
+	private boolean setContainsClause(XML set, XML clauseToMatch) {
+		for (XML actualClause : set.getChildren()) {
+			if(clausesMatch(actualClause, clauseToMatch)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean clausesMatch(XML actualClause, XML expectedClause) {
+		if(actualClause.getChildCount() != expectedClause.getChildCount()) {
+			return false;
+		}
+		for(XML expectedLiteral : expectedClause.getChildren()) {
+			if (!clauseContainsLiteral(actualClause, expectedLiteral)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean clauseContainsLiteral(XML clause, XML literal) {
+		for (XML child : clause.getChildren()) {
+			if (isLiteralNegated(child) == isLiteralNegated(literal) && atomOf(child).equals(atomOf(literal))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private void removeTautologies(XML set) {
 		for (XML clause : set.getChildren()) {
 			if (clauseIsTautology(clause)) {
@@ -372,8 +401,27 @@ public class Resolution extends DrawableTree {
 			}
 		}
 	}
+	
+	// Tautology: a clause that is true regardless of the variables,
+	// for example: A || !A
+	private boolean clauseIsTautology(XML clause) {
+		for (XML literal : clause.getChildren()) {
+			if (clauseContainsInverseOfLiteral(clause, literal)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean clauseContainsInverseOfLiteral(XML clause, XML literal) {
+		for (XML child : clause.getChildren()) {
+			if (isLiteralNegated(child) != isLiteralNegated(literal) && atomOf(child).equals(atomOf(literal))) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-	// TODO: Extract methods to reduce CC
 	// Implements resolution on the logic in tree. New resolvents
 	// are added as children to the only and-node in tree. This
 	// method returns true when a conflict is found, otherwise it
@@ -403,16 +451,40 @@ public class Resolution extends DrawableTree {
 		}
 		return false;
 	}
-	
-	private boolean setContainsConflictingClauses(XML set) {
-		for (XML clause1 : set.getChildren()) {
-			for (XML clause2 : set.getChildren()) {
-				if (clausesConflict(clause1, clause2)) {
-					return true;
-				}
+
+	private boolean clausesCanBeResolved(XML clause1, XML clause2) {
+		for(XML literal : clause1.getChildren()) {
+			if(clauseContainsInverseOfLiteral(clause2, literal)) {
+				return !clausesConflict(clause1, clause2);
 			}
 		}
 		return false;
+	}
+	
+	private boolean clausesConflict(XML clause1, XML clause2) {
+		for(XML literal : clause1.getChildren()) {
+			if(!clauseContainsInverseOfLiteral(clause2, literal)) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	// Returns the resolvent of two overlapping clauses.
+	private XML resolventOf(XML clause1, XML clause2) {
+		XML resolvent = new XML("or");
+		for(XML literal : clause1.getChildren()) {
+			if(!clauseContainsInverseOfLiteral(clause2, literal)) {
+				resolvent.addChild(literal);
+			}
+		}
+		for(XML literal : clause2.getChildren()) {
+			if(!clauseContainsInverseOfLiteral(clause1, literal)) {
+				resolvent.addChild(literal);
+			}
+		}
+		removeRedundantLiteralsIn(resolvent);
+		return resolvent;
 	}
 	
 	private boolean createResolventsFromSet(XML set) {
@@ -432,118 +504,30 @@ public class Resolution extends DrawableTree {
 		return wasUpdated;
 	}
 	
-	private boolean clausesConflict(XML clause1, XML clause2) {
-		for(XML literal : clause1.getChildren()) {
-			if(!clauseContainsInverseOfLiteral(clause2, literal)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	private boolean clausesCanBeResolved(XML clause1, XML clause2) {
-		for(XML literal : clause1.getChildren()) {
-			if(clauseContainsInverseOfLiteral(clause2, literal)) {
-				return !clausesConflict(clause1, clause2);
-			}
-		}
-		return false;
-	}
-	
-	// Returns the resolvent of two overlapping clauses.
-	private XML resolventOf(XML clause1, XML clause2) {
-		XML resolvent = new XML("or");
-		for(XML literal : clause1.getChildren()) {
-			if(!clauseContainsInverseOfLiteral(clause2, literal)) {
-				resolvent.addChild(literal);
-			}
-		}
-		for(XML literal : clause2.getChildren()) {
-			if(!clauseContainsInverseOfLiteral(clause1, literal)) {
-				resolvent.addChild(literal);
-			}
-		}
-		removeRedundantLiteralsIn(resolvent);
-		return resolvent;
-	}
-
-	// REQUIRED HELPERS: may be helpful to implement these before collapse(),
-	// applyResolution(), and resolve()
-	// Some terminology reminders regarding the following methods:
-	// atom: a single named proposition with no children independent of whether
-	// it is negated
-	// literal: either an atom-node containing a name, or a not-node with that
-	// atom as a child
-	// clause: an or-node, all the children of which are literals
-	// set: an and-node, all the children of which are clauses (disjunctions)
-
-	private boolean isLiteralNegated(XML literal) {
-		if (literal.getName().equals("not")) {
-			return true;
-		}
-		return false;
-	}
-
-	private String atomOf(XML literal) {
-		if (literal.getName().equals("not")) {
-			return literal.getChild(0).getName();
-		}
-		return literal.getName();
-	}
-
-	private boolean clauseContainsLiteral(XML clause, XML literal) {
-		for (XML child : clause.getChildren()) {
-			if (isLiteralNegated(child) == isLiteralNegated(literal) && atomOf(child).equals(atomOf(literal))) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	private boolean clauseContainsInverseOfLiteral(XML clause, XML literal) {
-		for (XML child : clause.getChildren()) {
-			if (isLiteralNegated(child) != isLiteralNegated(literal) && atomOf(child).equals(atomOf(literal))) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	private boolean literalsMatch(XML actual, XML expected) {
-		return atomOf(actual).equals(atomOf(expected)) && 
-				isLiteralNegated(actual) == isLiteralNegated(expected);
-	}
-
-	private boolean setContainsClause(XML set, XML clauseToMatch) {
-		for (XML actualClause : set.getChildren()) {
-			if(clausesMatch(actualClause, clauseToMatch)) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	private boolean clausesMatch(XML actualClause, XML expectedClause) {
-		if(actualClause.getChildCount() != expectedClause.getChildCount()) {
-			return false;
-		}
-		for(XML expectedLiteral : expectedClause.getChildren()) {
-			if (!clauseContainsLiteral(actualClause, expectedLiteral)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	// Tautology: a clause that is true regardless of the variables,
-	// for example: A || !A
-	private boolean clauseIsTautology(XML clause) {
-		for (XML literal : clause.getChildren()) {
-			if (clauseContainsInverseOfLiteral(clause, literal)) {
-				return true;
+	private boolean setContainsConflictingClauses(XML set) {
+		for (XML clause1 : set.getChildren()) {
+			for (XML clause2 : set.getChildren()) {
+				if (clausesConflict(clause1, clause2)) {
+					return true;
+				}
 			}
 		}
 		return false;
 	}
 
+	private boolean isTerm(XML node) {
+		return !( isNot(node) || isOr(node) || isAnd(node) || isCondition(node) || isBicondition(node) );
+	}
+
+	private boolean isNot(XML node) {
+		return node.getName().equals("not");
+	}
+
+	private boolean isOr(XML node) {
+		return node.getName().equals("or");
+	}
+
+	private boolean isAnd(XML node) {
+		return node.getName().equals("and");
+	}
 }
