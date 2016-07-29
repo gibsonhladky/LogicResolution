@@ -380,31 +380,56 @@ public class Resolution extends DrawableTree {
 	// only returns false after exploring all possible resolvents.
 	public boolean applyResolution() {
 		XML set = tree.getChild(0);
-		boolean updated = true;
-		boolean conflict = false;
-
-		// Continue iterating until no more resolvents are found
-		while (updated) {
-			updated = false;
-			// Compare all pairs of clauses to create new resolvents
-			for (XML clause1 : set.getChildren()) {
-				for (XML clause2 : set.getChildren()) {
-					if (clausesConflict(clause1, clause2)) {
-						conflict = true;
-					}
-					else if (clausesCanBeResolved(clause1, clause2)){
-						XML resolvent = resolve(clause1, clause2);
-						// Add new valid non-duplicate resolvents
-						if (!setContainsClause(set, resolvent)) {
-							set.addChild(resolvent);
-							updated = true;
-						}
+		
+		while (setCanBeResolvedFurther(set)) {
+			createResolventsFromSet(set);
+		}
+		
+		dirtyTree = true;
+		return setContainsConflictingClauses(set);
+	}
+	
+	private boolean setCanBeResolvedFurther(XML set) {
+		for (XML clause1 : set.getChildren()) {
+			for (XML clause2 : set.getChildren()) {
+				if (clausesCanBeResolved(clause1, clause2)){
+					XML resolvent = resolventOf(clause1, clause2);
+					// Add new valid non-duplicate resolvents
+					if (!setContainsClause(set, resolvent)) {
+						return true;
 					}
 				}
 			}
 		}
-		dirtyTree = true;
-		return conflict;
+		return false;
+	}
+	
+	private boolean setContainsConflictingClauses(XML set) {
+		for (XML clause1 : set.getChildren()) {
+			for (XML clause2 : set.getChildren()) {
+				if (clausesConflict(clause1, clause2)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	private boolean createResolventsFromSet(XML set) {
+		boolean wasUpdated = false;
+		for (XML clause1 : set.getChildren()) {
+			for (XML clause2 : set.getChildren()) {
+				if (clausesCanBeResolved(clause1, clause2)){
+					XML resolvent = resolventOf(clause1, clause2);
+					// Add new valid non-duplicate resolvents
+					if (!setContainsClause(set, resolvent)) {
+						set.addChild(resolvent);
+						wasUpdated = true;
+					}
+				}
+			}
+		}
+		return wasUpdated;
 	}
 	
 	private boolean clausesConflict(XML clause1, XML clause2) {
@@ -416,27 +441,10 @@ public class Resolution extends DrawableTree {
 		return true;
 	}
 
-	// Attempts to resolve two clauses and return the resulting
-	// resolvent. Removes any redundant literals from the
-	// resulting resolvent. If there is a conflict,
-	// returns an XML node with zero children. If the two clauses cannot
-	// be resolved,returns null.
-	private XML resolve(XML clause1, XML clause2) {
-		if(clausesConflict(clause1, clause2)) {
-			return new XML("conflict");
-		}
-		else if(clausesCanBeResolved(clause1, clause2)){
-			return resolventOf(clause1, clause2);
-		}
-		else {
-			return null;
-		}
-	}
-	
 	private boolean clausesCanBeResolved(XML clause1, XML clause2) {
 		for(XML literal : clause1.getChildren()) {
 			if(clauseContainsInverseOfLiteral(clause2, literal)) {
-				return true;
+				return !clausesConflict(clause1, clause2);
 			}
 		}
 		return false;
