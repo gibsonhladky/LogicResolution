@@ -1,13 +1,33 @@
 package resolution;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import processing.data.XML;
 
 public class Clause {
 
 	private XML root;
+	private List<Literal> literals;
 	
 	public Clause(XML clauseRoot) {
 		root = clauseRoot;
+		literals = new ArrayList<Literal>(root.getChildCount());
+		addLiteralsFrom(clauseRoot);
+	}
+	
+	private void addLiteralsFrom(XML clauseRoot) {
+		for(XML literalNode : clauseRoot.getChildren()) {
+			literals.add(new Literal(literalNode));
+		}
+	}
+	
+	public XML toXML() {
+		XML root = new XML("or");
+		for(Literal literal : literals) {
+			root.addChild(literal.toXML());
+		}
+		return root;
 	}
 	
 	@Override
@@ -16,20 +36,20 @@ public class Clause {
 			return false;
 		}
 		Clause otherClause = (Clause) other;
-		if(otherClause.root.getChildCount() != root.getChildCount()) {
+		if(otherClause.literals.size() != literals.size()) {
 			return false;
 		}
-		for(XML expectedLiteral : root.getChildren()) {
-			if (!otherClause.clauseContainsLiteral(expectedLiteral)) {
+		for(Literal literal : literals) {
+			if (!otherClause.clauseContainsLiteral(literal)) {
 				return false;
 			}
 		}
 		return true;
 	}
 
-	private boolean clauseContainsLiteral(XML literal) {
-		for (XML child : root.getChildren()) {
-			if (new Literal(child).equals(new Literal(literal))) {
+	private boolean clauseContainsLiteral(Literal expectedLiteral) {
+		for (Literal literal : literals) {
+			if (literal.equals(expectedLiteral)) {
 				return true;
 			}
 		}
@@ -37,7 +57,7 @@ public class Clause {
 	}
 	
 	public boolean canBeResolvedWith(Clause other) {
-		for(XML literal : root.getChildren()) {
+		for(Literal literal : literals) {
 			if(other.containsInverseOfLiteral(literal)) {
 				return !conflictsWith(other);
 			}
@@ -45,9 +65,9 @@ public class Clause {
 		return false;
 	}
 	
-	public boolean containsInverseOfLiteral(XML literal) {
-		for (XML child : root.getChildren()) {
-			if (new Literal(child).isInverseOf(new Literal(literal))) {
+	public boolean containsInverseOfLiteral(Literal expectedLiteral) {
+		for (Literal literal : literals) {
+			if (literal.isInverseOf(expectedLiteral)) {
 				return true;
 			}
 		}
@@ -55,7 +75,7 @@ public class Clause {
 	}
 	
 	public boolean conflictsWith(Clause other) {
-		for(XML literal : root.getChildren()) {
+		for(Literal literal : literals) {
 			if(!other.containsInverseOfLiteral(literal)) {
 				return false;
 			}
@@ -64,15 +84,16 @@ public class Clause {
 	}
 	
 	public XML resolveWith(XML other) {
+		Clause otherClause = new Clause(other);
 		XML resolvent = new XML("or");
-		for(XML literal : root.getChildren()) {
-			if(!new Clause(other).containsInverseOfLiteral(literal)) {
-				resolvent.addChild(literal);
+		for(Literal literal : literals) {
+			if(!otherClause.containsInverseOfLiteral(literal)) {
+				resolvent.addChild(literal.toXML());
 			}
 		}
-		for(XML literal : other.getChildren()) {
+		for(Literal literal : otherClause.literals) {
 			if(!containsInverseOfLiteral(literal)) {
-				resolvent.addChild(literal);
+				resolvent.addChild(literal.toXML());
 			}
 		}
 		new Clause(resolvent).removeRedundantLiterals();
@@ -82,7 +103,7 @@ public class Clause {
 	// Tautology: a clause that is true regardless of the variables,
 	// for example: A || !A
 	public boolean isTautology() {
-		for (XML literal : root.getChildren()) {
+		for (Literal literal : literals) {
 			if (containsInverseOfLiteral(literal)) {
 				return true;
 			}
@@ -90,6 +111,7 @@ public class Clause {
 		return false;
 	}
 	
+	// TODO: Break dependency on root here
 	public void removeRedundantLiterals() {
 		for (int i = 0; i < root.getChildCount(); i++) {
 			removeMultiplesOfLiteral(root.getChild(i));

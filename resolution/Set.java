@@ -9,9 +9,26 @@ import processing.data.XML;
 public class Set {
 
 	private XML root;
+	private List<Clause> clauses;
 	
 	public Set(XML setRoot) {
 		root = setRoot;
+		clauses = new ArrayList<Clause>(setRoot.getChildCount());
+		addClausesFrom(setRoot);
+	}
+	
+	private void addClausesFrom(XML setRoot) {
+		for(XML clauseNode : setRoot.getChildren()) {
+			clauses.add(new Clause(clauseNode));
+		}
+	}
+	
+	public XML toXML() {
+		XML root = new XML("and");
+		for(Clause clause : clauses) {
+			root.addChild(clause.toXML());
+		}
+		return root;
 	}
 	
 	public List<XML> getClauses() {

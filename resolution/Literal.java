@@ -4,10 +4,24 @@ import processing.data.XML;
 
 public class Literal {
 	
-	private XML root;
+	private String atom;
+	private boolean isNegated;
 	
-	public Literal(XML rootNode) {
-		root = rootNode;
+	public Literal(XML root) {
+		atom = root.getName().equals("not") ? root.getChild(0).getName() : root.getName();
+		isNegated = root.getName().equals("not");
+	}
+	
+	public XML toXML() {
+		XML literal;
+		if(isNegated) {
+			literal = new XML("not");
+			literal.addChild(atom);
+		}
+		else {
+			literal = new XML(atom);
+		}
+		return literal;
 	}
 	
 	@Override
@@ -16,27 +30,13 @@ public class Literal {
 			return false;
 		}
 		Literal otherLiteral = (Literal) other;
-		return atom().equals(otherLiteral.atom()) && 
-				isNegated() == otherLiteral.isNegated();
+		return atom.equals(otherLiteral.atom) && 
+				isNegated == otherLiteral.isNegated;
 	}
 	
 	public boolean isInverseOf(Literal other) {
-		return atom().equals(other.atom()) &&
-				isNegated() != other.isNegated();
-	}
-	
-	private boolean isNegated() {
-		if (root.getName().equals("not")) {
-			return true;
-		}
-		return false;
-	}
-	
-	private String atom() {
-		if (root.getName().equals("not")) {
-			return root.getChild(0).getName();
-		}
-		return root.getName();
+		return atom.equals(other.atom) &&
+				isNegated != other.isNegated;
 	}
 	
 }
