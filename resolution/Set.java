@@ -43,35 +43,24 @@ public class Set {
 	
 	public void removeRedundancy() {
 		for (XML clause : root.getChildren()) {
-			new Clause(clause).removeRedundantLiteralsIn();
+			new Clause(clause).removeRedundantLiterals();
 		}
 		removeRedundantClauses();
 	}
 
 	public void removeTautologies() {
 		for (XML clause : root.getChildren()) {
-			if (clauseIsTautology(clause)) {
+			if (new Clause(clause).isTautology()) {
 				root.removeChild(clause);
 			}
 		}
-	}
-	
-	// Tautology: a clause that is true regardless of the variables,
-	// for example: A || !A
-	private boolean clauseIsTautology(XML clause) {
-		for (XML literal : clause.getChildren()) {
-			if (new Clause(clause).containsInverseOfLiteral(literal)) {
-				return true;
-			}
-		}
-		return false;
 	}
 	
 	public boolean canBeResolvedFurther() {
 		for (XML clause1 : root.getChildren()) {
 			for (XML clause2 : root.getChildren()) {
 				if (new Clause(clause1).canBeResolvedWith(new Clause(clause2))){
-					XML resolvent = resolventOf(clause1, clause2);
+					XML resolvent = new Clause(clause1).resolveWith(clause2);
 					// Add new valid non-duplicate resolvents
 					if (!containsClause(resolvent)) {
 						return true;
@@ -82,40 +71,20 @@ public class Set {
 		return false;
 	}
 	
-	public boolean createResolvents() {
-		boolean wasUpdated = false;
+	public void createResolvents() {
 		for (XML clause1 : root.getChildren()) {
 			for (XML clause2 : root.getChildren()) {
 				if (new Clause(clause1).canBeResolvedWith(new Clause(clause2))){
-					XML resolvent = resolventOf(clause1, clause2);
+					XML resolvent = new Clause(clause1).resolveWith(clause2);
 					// Add new valid non-duplicate resolvents
 					if (!containsClause(resolvent)) {
 						root.addChild(resolvent);
-						wasUpdated = true;
 					}
 				}
 			}
 		}
-		return wasUpdated;
 	}
 	
-	// Returns the resolvent of two overlapping clauses.
-	private XML resolventOf(XML clause1, XML clause2) {
-		XML resolvent = new XML("or");
-		for(XML literal : clause1.getChildren()) {
-			if(!new Clause(clause2).containsInverseOfLiteral(literal)) {
-				resolvent.addChild(literal);
-			}
-		}
-		for(XML literal : clause2.getChildren()) {
-			if(!new Clause(clause1).containsInverseOfLiteral(literal)) {
-				resolvent.addChild(literal);
-			}
-		}
-		new Clause(resolvent).removeRedundantLiteralsIn();
-		return resolvent;
-	}
-
 	public boolean setContainsConflictingClauses() {
 		for (XML clause1 : root.getChildren()) {
 			for (XML clause2 : root.getChildren()) {

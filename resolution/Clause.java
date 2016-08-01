@@ -20,16 +20,16 @@ public class Clause {
 			return false;
 		}
 		for(XML expectedLiteral : root.getChildren()) {
-			if (!otherClause.containsLiteral(expectedLiteral)) {
+			if (!otherClause.clauseContainsLiteral(expectedLiteral)) {
 				return false;
 			}
 		}
 		return true;
 	}
 
-	private boolean containsLiteral(XML literal) {
+	private boolean clauseContainsLiteral(XML literal) {
 		for (XML child : root.getChildren()) {
-			if (literalsMatch(child, literal)) {
+			if (new Literal(child).equals(new Literal(literal))) {
 				return true;
 			}
 		}
@@ -47,7 +47,7 @@ public class Clause {
 	
 	public boolean containsInverseOfLiteral(XML literal) {
 		for (XML child : root.getChildren()) {
-			if (isLiteralNegated(child) != isLiteralNegated(literal) && atomOf(child).equals(atomOf(literal))) {
+			if (new Literal(child).isInverseOf(new Literal(literal))) {
 				return true;
 			}
 		}
@@ -63,21 +63,34 @@ public class Clause {
 		return true;
 	}
 	
-	private boolean isLiteralNegated(XML literal) {
-		if (literal.getName().equals("not")) {
-			return true;
+	public XML resolveWith(XML other) {
+		XML resolvent = new XML("or");
+		for(XML literal : root.getChildren()) {
+			if(!new Clause(other).containsInverseOfLiteral(literal)) {
+				resolvent.addChild(literal);
+			}
+		}
+		for(XML literal : other.getChildren()) {
+			if(!containsInverseOfLiteral(literal)) {
+				resolvent.addChild(literal);
+			}
+		}
+		new Clause(resolvent).removeRedundantLiterals();
+		return resolvent;
+	}
+	
+	// Tautology: a clause that is true regardless of the variables,
+	// for example: A || !A
+	public boolean isTautology() {
+		for (XML literal : root.getChildren()) {
+			if (containsInverseOfLiteral(literal)) {
+				return true;
+			}
 		}
 		return false;
 	}
 	
-	private String atomOf(XML literal) {
-		if (literal.getName().equals("not")) {
-			return literal.getChild(0).getName();
-		}
-		return literal.getName();
-	}
-	
-	public void removeRedundantLiteralsIn() {
+	public void removeRedundantLiterals() {
 		for (int i = 0; i < root.getChildCount(); i++) {
 			removeMultiplesOfLiteral(root.getChild(i));
 		}
@@ -85,14 +98,9 @@ public class Clause {
 	
 	private void removeMultiplesOfLiteral(XML literal) {
 		for(XML child : root.getChildren()) {
-			if(literalsMatch(child, literal) && !child.equals(literal)) {
+			if(new Literal(child).equals(new Literal(literal)) && !child.equals(literal)) {
 				root.removeChild(child);
 			}
 		}
-	}
-	
-	private boolean literalsMatch(XML actual, XML expected) {
-		return atomOf(actual).equals(atomOf(expected)) && 
-				isLiteralNegated(actual) == isLiteralNegated(expected);
 	}
 }
