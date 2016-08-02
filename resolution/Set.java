@@ -1,7 +1,6 @@
 package resolution;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import processing.data.XML;
@@ -15,6 +14,7 @@ public class Set {
 		root = setRoot;
 		clauses = new ArrayList<Clause>(setRoot.getChildCount());
 		addClausesFrom(setRoot);
+		removeRedundancy();
 	}
 	
 	private void addClausesFrom(XML setRoot) {
@@ -31,11 +31,7 @@ public class Set {
 		return root;
 	}
 	
-	public List<XML> getClauses() {
-		return Arrays.asList(root.getChildren());
-	}
-	
-	public void removeRedundantClauses() {
+	private void removeRedundantClauses() {
 		ArrayList<XML> nonRedundantClauses = new ArrayList<XML>();
 		for (XML tempClause : root.getChildren()) {
 			root.removeChild(tempClause);
@@ -58,14 +54,15 @@ public class Set {
 		return false;
 	}
 	
-	public void removeRedundancy() {
+	private void removeRedundancy() {
 		for (XML clause : root.getChildren()) {
 			new Clause(clause).removeRedundantLiterals();
 		}
 		removeRedundantClauses();
+		removeTautologies();
 	}
 
-	public void removeTautologies() {
+	private void removeTautologies() {
 		for (XML clause : root.getChildren()) {
 			if (new Clause(clause).isTautology()) {
 				root.removeChild(clause);
@@ -73,7 +70,13 @@ public class Set {
 		}
 	}
 	
-	public boolean canBeResolvedFurther() {
+	public void resolve() {
+		while (canBeResolvedFurther()) {
+			createResolvents();
+		}
+	}
+	
+	private boolean canBeResolvedFurther() {
 		for (XML clause1 : root.getChildren()) {
 			for (XML clause2 : root.getChildren()) {
 				if (new Clause(clause1).canBeResolvedWith(new Clause(clause2))){
@@ -88,7 +91,7 @@ public class Set {
 		return false;
 	}
 	
-	public void createResolvents() {
+	private void createResolvents() {
 		for (XML clause1 : root.getChildren()) {
 			for (XML clause2 : root.getChildren()) {
 				if (new Clause(clause1).canBeResolvedWith(new Clause(clause2))){
@@ -102,7 +105,7 @@ public class Set {
 		}
 	}
 	
-	public boolean setContainsConflictingClauses() {
+	public boolean containsConflict() {
 		for (XML clause1 : root.getChildren()) {
 			for (XML clause2 : root.getChildren()) {
 				if (new Clause(clause1).conflictsWith(new Clause(clause2))) {

@@ -233,8 +233,6 @@ public class Resolution extends DrawableTree {
 		unnestLogic(tree);
 		guaranteeFormat();
 		Set set = new Set(tree.getChild(0));
-		set.removeRedundancy();
-		set.removeTautologies();
 		dirtyTree = true;
 	}
 	
@@ -310,12 +308,10 @@ public class Resolution extends DrawableTree {
 	// only returns false after exploring all possible resolvents.
 	public boolean applyResolution() {
 		Set set = new Set(tree.getChild(0));
-		while (set.canBeResolvedFurther()) {
-			set.createResolvents();
-		}
+		set.resolve();
 		
 		dirtyTree = true;
-		return set.setContainsConflictingClauses();
+		return set.containsConflict();
 	}
 
 	private boolean isTerm(XML node) {
