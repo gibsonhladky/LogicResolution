@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import processing.data.XML;
+import tests.XMLMatcher;
 
 public class Set {
 
@@ -13,20 +14,16 @@ public class Set {
 	public Set(XML setRoot) {
 		root = setRoot;
 		clauses = new ArrayList<Clause>(setRoot.getChildCount());
-		addClausesFrom(setRoot);
 		removeRedundancy();
-	}
-	
-	private void addClausesFrom(XML setRoot) {
-		for(XML clauseNode : setRoot.getChildren()) {
-			clauses.add(new Clause(clauseNode));
-		}
 	}
 	
 	public XML toXML() {
 		XML root = new XML("and");
 		for(Clause clause : clauses) {
 			root.addChild(clause.toXML());
+		}
+		if(!XMLMatcher.equivalentTo(root).matches(this.root)) {
+			System.out.println("expected: " + this.root + "\n but was: " + root + "\n");
 		}
 		return root;
 	}
@@ -56,16 +53,27 @@ public class Set {
 	
 	private void removeRedundancy() {
 		for (XML clause : root.getChildren()) {
-			new Clause(clause).removeRedundantLiterals();
+			Clause newClause = new Clause(clause);
+			newClause.removeRedundantLiterals();
+			replaceChildWith(clause, newClause.toXML());
 		}
 		removeRedundantClauses();
 		removeTautologies();
+	}
+
+	private void replaceChildWith(XML child, XML replacement) {
+		child.getParent().addChild(replacement);
+		child.getParent().removeChild(child);
 	}
 
 	private void removeTautologies() {
 		for (XML clause : root.getChildren()) {
 			if (new Clause(clause).isTautology()) {
 				root.removeChild(clause);
+				clauses.remove(new Clause(clause));
+			}
+			else {
+				clauses.add(new Clause(clause));
 			}
 		}
 	}

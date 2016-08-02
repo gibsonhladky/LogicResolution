@@ -122,6 +122,7 @@ public class Clause {
 		for(XML child : root.getChildren()) {
 			if(new Literal(child).equals(new Literal(literal)) && !child.equals(literal)) {
 				root.removeChild(child);
+				literals.remove(new Literal(child));
 			}
 		}
 	}

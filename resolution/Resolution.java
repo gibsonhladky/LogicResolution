@@ -233,6 +233,7 @@ public class Resolution extends DrawableTree {
 		unnestLogic(tree);
 		guaranteeFormat();
 		Set set = new Set(tree.getChild(0));
+		replaceChildWith(tree.getChild(0), set.toXML());
 		dirtyTree = true;
 	}
 	
