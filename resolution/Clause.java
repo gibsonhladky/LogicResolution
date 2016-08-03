@@ -113,16 +113,22 @@ public class Clause {
 	
 	// TODO: Break dependency on root here
 	public void removeRedundantLiterals() {
+		List<Literal> nonRedundantLiterals = new ArrayList<Literal>();
 		for (int i = 0; i < root.getChildCount(); i++) {
+			Literal newLiteral = new Literal(root.getChild(i));
+			if(!nonRedundantLiterals.contains(newLiteral)) {
+				nonRedundantLiterals.add(newLiteral);
+			}
 			removeMultiplesOfLiteral(root.getChild(i));
 		}
+		literals = nonRedundantLiterals;
 	}
 	
-	private void removeMultiplesOfLiteral(XML literal) {
+	private void removeMultiplesOfLiteral(XML literalNode) {
 		for(XML child : root.getChildren()) {
-			if(new Literal(child).equals(new Literal(literal)) && !child.equals(literal)) {
+			if(new Literal(child).equals(new Literal(literalNode)) && !child.equals(literalNode)) {
 				root.removeChild(child);
-				literals.remove(new Literal(child));
+//				literals.remove(new Literal(child));
 			}
 		}
 	}

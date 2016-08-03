@@ -310,7 +310,7 @@ public class Resolution extends DrawableTree {
 	public boolean applyResolution() {
 		Set set = new Set(tree.getChild(0));
 		set.resolve();
-		
+		replaceChildWith(tree.getChild(0), set.toXML());
 		dirtyTree = true;
 		return set.containsConflict();
 	}
