@@ -5,6 +5,10 @@ import java.util.List;
 
 import processing.data.XML;
 
+/*
+ * A Set is a conjunction of one or more unique Clauses (disjunctions).
+ * A Set does not contain any redundant Clauses, nor any tautologies.
+ */
 public class Set {
 
 	private List<Clause> clauses;
@@ -39,6 +43,10 @@ public class Set {
 		clauses = nonRedundantClauses;
 	}
 	
+	/*
+	 * Note: The XML node must have only the Clauses of the Set as children.
+	 * Any name or attributes are ignored for the Set.
+	 */
 	public static Set fromXML(XML setRoot) {
 		return new Set(clausesFromXML(setRoot.getChildren()));
 	}
@@ -51,6 +59,12 @@ public class Set {
 		return clauses;
 	}
 	
+	/*
+	 * Returns true if any clause in this set conflicts with any other
+	 * clause in this set.
+	 * Note: The result of this function is only guaranteed to be accurate
+	 * if the Set has already been resolved.
+	 */
 	public boolean containsConflict() {
 		for (Clause clause1 : clauses) {
 			for (Clause clause2 : clauses) {
@@ -64,7 +78,7 @@ public class Set {
 	
 	public void resolve() {
 		while (canBeResolvedFurther()) {
-			addNewResolventsFrom(createNewResolvents());
+			addNewResolventsFrom(generateResolvents());
 		}
 	}
 	
@@ -91,15 +105,13 @@ public class Set {
 		}
 	}
 	
-	private List<Clause> createNewResolvents() {
+	private List<Clause> generateResolvents() {
 		List<Clause> newResolvents = new ArrayList<Clause>();
 		for (Clause clause1 : clauses) {
 			for (Clause clause2 : clauses) {
 				if (clause1.canBeResolvedWith(clause2)){
 					Clause resolvent = clause1.resolveWith(clause2);
-					if (!newResolvents.contains(resolvent)) {
-						newResolvents.add(resolvent);
-					}
+					newResolvents.add(resolvent);
 				}
 			}
 		}

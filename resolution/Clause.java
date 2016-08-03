@@ -5,6 +5,10 @@ import java.util.List;
 
 import processing.data.XML;
 
+/*
+ * A Clause is a disjunction of Literals.
+ * A Clause does not contain any redundant Literals.
+ */
 public class Clause {
 
 	private List<Literal> literals;
@@ -24,6 +28,14 @@ public class Clause {
 		literals = nonRedundantLiterals;
 	}
 	
+	private static Clause withLiterals(List<Literal> literals) {
+		return new Clause(literals);
+	}
+	
+	/*
+	 * Note: The XML node must have only the Literals of the Clause as children.
+	 * Any name or attributes are ignored for the Clause.
+	 */
 	public static Clause fromXML(XML clauseRoot) {
 		return new Clause(literalsFromXML(clauseRoot.getChildren()));
 	}
@@ -36,17 +48,24 @@ public class Clause {
 		return literals;
 	}
 	
+	/*
+	 * A Clause can only be equal to another Clause.
+	 * Clauses are equal if they contain all of each others Literals.
+	 */
 	@Override
 	public boolean equals(Object other) {
 		if(!(other instanceof Clause)) {
 			return false;
 		}
-		Clause otherClause = (Clause) other;
-		if(otherClause.literals.size() != literals.size()) {
+		return equals((Clause) other);
+	}
+	
+	private boolean equals(Clause other) {
+		if(other.literals.size() != literals.size()) {
 			return false;
 		}
 		for(Literal literal : literals) {
-			if (!otherClause.clauseContainsLiteral(literal)) {
+			if (!other.clauseContainsLiteral(literal)) {
 				return false;
 			}
 		}
@@ -62,6 +81,10 @@ public class Clause {
 		return false;
 	}
 	
+	/*
+	 * Two Clauses can be resolved if they contain inverse Literals
+	 * and do not conflict.
+	 */
 	public boolean canBeResolvedWith(Clause other) {
 		for(Literal literal : literals) {
 			if(other.containsInverseOfLiteral(literal)) {
@@ -80,6 +103,9 @@ public class Clause {
 		return false;
 	}
 	
+	/*
+	 * Clauses conflict if each contains the inverse of the other's Literals.
+	 */
 	public boolean conflictsWith(Clause other) {
 		for(Literal literal : literals) {
 			if(!other.containsInverseOfLiteral(literal)) {
@@ -89,28 +115,36 @@ public class Clause {
 		return true;
 	}
 	
+	/*
+	 * Produces a new Clause containing the Literals from each Clause
+	 * that the other did not have an inverse of.
+	 */
 	public Clause resolveWith(Clause other) {
-		List<Literal> resolvedLiterals = new ArrayList<Literal>();
-		resolvedLiterals.addAll(literalsWhenResolvedWith(other));
-		resolvedLiterals.addAll(other.literalsWhenResolvedWith(this));
-		
-		Clause resolvent = new Clause(resolvedLiterals);
+		Clause resolvent = Clause.withLiterals(literalsWhenResolvedWith(other));
 		resolvent.removeRedundantLiterals();
 		return resolvent;
 	}
 	
 	private List<Literal> literalsWhenResolvedWith(Clause other) {
 		List<Literal> resolvedLiterals = new ArrayList<Literal>();
+		// TODO: extract method to eliminate duplication.
 		for(Literal literal : literals) {
 			if(!other.containsInverseOfLiteral(literal)) {
+				resolvedLiterals.add(literal);
+			}
+		}
+		for(Literal literal : other.literals) {
+			if(!containsInverseOfLiteral(literal)) {
 				resolvedLiterals.add(literal);
 			}
 		}
 		return resolvedLiterals;
 	}
 	
-	// Tautology is a clause that is true regardless of the variables,
-	// for example: A || !A
+	/*
+	 * Returns true if this Clause contains any Literal whose inverse
+	 * is also in the Clause.
+	 */
 	public boolean isTautology() {
 		for (Literal literal : literals) {
 			if (containsInverseOfLiteral(literal)) {
