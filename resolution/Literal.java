@@ -18,18 +18,6 @@ public class Literal {
 		return new Literal(atom, isNegated);
 	}
 	
-	public XML toXML() {
-		XML literal;
-		if(isNegated) {
-			literal = new XML("not");
-			literal.addChild(atom);
-		}
-		else {
-			literal = new XML(atom);
-		}
-		return literal;
-	}
-	
 	@Override
 	public boolean equals(Object other) {
 		if(!(other instanceof Literal)) {
@@ -43,6 +31,18 @@ public class Literal {
 	public boolean isInverseOf(Literal other) {
 		return atom.equals(other.atom) &&
 				isNegated != other.isNegated;
+	}
+	
+	public XML toXML() {
+		XML literal;
+		if(isNegated) {
+			literal = new XML("not");
+			literal.addChild(atom);
+		}
+		else {
+			literal = new XML(atom);
+		}
+		return literal;
 	}
 	
 }

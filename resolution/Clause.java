@@ -11,6 +11,17 @@ public class Clause {
 	
 	private Clause(List<Literal> literals) {
 		this.literals = literals;
+		removeRedundantLiterals();
+	}
+	
+	private void removeRedundantLiterals() {
+		List<Literal> nonRedundantLiterals = new ArrayList<Literal>();
+		for (Literal literal : literals) {
+			if(!nonRedundantLiterals.contains(literal)) {
+				nonRedundantLiterals.add(literal);
+			}
+		}
+		literals = nonRedundantLiterals;
 	}
 	
 	public static Clause fromXML(XML clauseRoot) {
@@ -23,14 +34,6 @@ public class Clause {
 			literals.add(Literal.fromXML(literalRoot));
 		}
 		return literals;
-	}
-	
-	public XML toXML() {
-		XML root = new XML("or");
-		for(Literal literal : literals) {
-			root.addChild(literal.toXML());
-		}
-		return root;
 	}
 	
 	@Override
@@ -68,7 +71,7 @@ public class Clause {
 		return false;
 	}
 	
-	public boolean containsInverseOfLiteral(Literal expectedLiteral) {
+	private boolean containsInverseOfLiteral(Literal expectedLiteral) {
 		for (Literal literal : literals) {
 			if (literal.isInverseOf(expectedLiteral)) {
 				return true;
@@ -87,23 +90,26 @@ public class Clause {
 	}
 	
 	public Clause resolveWith(Clause other) {
-		XML resolventNode = new XML("or");
-		for(Literal literal : literals) {
-			if(!other.containsInverseOfLiteral(literal)) {
-				resolventNode.addChild(literal.toXML());
-			}
-		}
-		for(Literal literal : other.literals) {
-			if(!containsInverseOfLiteral(literal)) {
-				resolventNode.addChild(literal.toXML());
-			}
-		}
-		Clause resolvent = Clause.fromXML(resolventNode);
+		List<Literal> resolvedLiterals = new ArrayList<Literal>();
+		resolvedLiterals.addAll(literalsWhenResolvedWith(other));
+		resolvedLiterals.addAll(other.literalsWhenResolvedWith(this));
+		
+		Clause resolvent = new Clause(resolvedLiterals);
 		resolvent.removeRedundantLiterals();
 		return resolvent;
 	}
 	
-	// Tautology: a clause that is true regardless of the variables,
+	private List<Literal> literalsWhenResolvedWith(Clause other) {
+		List<Literal> resolvedLiterals = new ArrayList<Literal>();
+		for(Literal literal : literals) {
+			if(!other.containsInverseOfLiteral(literal)) {
+				resolvedLiterals.add(literal);
+			}
+		}
+		return resolvedLiterals;
+	}
+	
+	// Tautology is a clause that is true regardless of the variables,
 	// for example: A || !A
 	public boolean isTautology() {
 		for (Literal literal : literals) {
@@ -114,13 +120,11 @@ public class Clause {
 		return false;
 	}
 	
-	public void removeRedundantLiterals() {
-		List<Literal> nonRedundantLiterals = new ArrayList<Literal>();
-		for (Literal literal : literals) {
-			if(!nonRedundantLiterals.contains(literal)) {
-				nonRedundantLiterals.add(literal);
-			}
+	public XML toXML() {
+		XML root = new XML("or");
+		for(Literal literal : literals) {
+			root.addChild(literal.toXML());
 		}
-		literals = nonRedundantLiterals;
+		return root;
 	}
 }

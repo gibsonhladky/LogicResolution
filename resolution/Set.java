@@ -14,42 +14,9 @@ public class Set {
 		removeRedundancy();
 	}
 	
-	public static Set fromXML(XML setRoot) {
-		return new Set(clausesFromXML(setRoot.getChildren()));
-	}
-	
-	private static List<Clause> clausesFromXML(XML[] clauseRoots) {
-		List<Clause> clauses = new ArrayList<Clause>(clauseRoots.length);
-		for(XML clauseRoot : clauseRoots) {
-			clauses.add(Clause.fromXML(clauseRoot));
-		}
-		return clauses;
-	}
-	
-	public XML toXML() {
-		XML root = new XML("and");
-		for(Clause clause : clauses) {
-			root.addChild(clause.toXML());
-		}
-		return root;
-	}
-	
 	private void removeRedundancy() {
-		for (Clause clause : clauses) {
-			clause.removeRedundantLiterals();
-		}
-		removeRedundantClauses();
 		removeTautologies();
-	}
-	
-	private void removeRedundantClauses() {
-		List<Clause> nonRedundantClauses = new ArrayList<Clause>();
-		for (Clause clause : clauses) {
-			if (!nonRedundantClauses.contains(clause)) {
-				nonRedundantClauses.add(clause);
-			}
-		}
-		clauses = nonRedundantClauses;
+		removeRedundantClauses();
 	}
 
 	private void removeTautologies() {
@@ -62,9 +29,42 @@ public class Set {
 		clauses.removeAll(tautologies);
 	}
 	
+	private void removeRedundantClauses() {
+		List<Clause> nonRedundantClauses = new ArrayList<Clause>();
+		for (Clause clause : clauses) {
+			if (!nonRedundantClauses.contains(clause)) {
+				nonRedundantClauses.add(clause);
+			}
+		}
+		clauses = nonRedundantClauses;
+	}
+	
+	public static Set fromXML(XML setRoot) {
+		return new Set(clausesFromXML(setRoot.getChildren()));
+	}
+	
+	private static List<Clause> clausesFromXML(XML[] clauseRoots) {
+		List<Clause> clauses = new ArrayList<Clause>(clauseRoots.length);
+		for(XML clauseRoot : clauseRoots) {
+			clauses.add(Clause.fromXML(clauseRoot));
+		}
+		return clauses;
+	}
+	
+	public boolean containsConflict() {
+		for (Clause clause1 : clauses) {
+			for (Clause clause2 : clauses) {
+				if (clause1.conflictsWith(clause2)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
 	public void resolve() {
 		while (canBeResolvedFurther()) {
-			createResolvents();
+			addNewResolventsFrom(createNewResolvents());
 		}
 	}
 	
@@ -83,19 +83,7 @@ public class Set {
 		return false;
 	}
 	
-	private void createResolvents() {
-		List<Clause> newResolvents = new ArrayList<Clause>();
-		for (Clause clause1 : clauses) {
-			for (Clause clause2 : clauses) {
-				if (clause1.canBeResolvedWith(clause2)){
-					Clause resolvent = clause1.resolveWith(clause2);
-					// Add new valid non-duplicate resolvents
-					if (!clauses.contains(newResolvents)) {
-						newResolvents.add(resolvent);
-					}
-				}
-			}
-		}
+	private void addNewResolventsFrom(List<Clause> newResolvents) {
 		for(Clause clause : newResolvents) {
 			if(!clauses.contains(clause)) {
 				clauses.add(clause);
@@ -103,14 +91,26 @@ public class Set {
 		}
 	}
 	
-	public boolean containsConflict() {
+	private List<Clause> createNewResolvents() {
+		List<Clause> newResolvents = new ArrayList<Clause>();
 		for (Clause clause1 : clauses) {
 			for (Clause clause2 : clauses) {
-				if (clause1.conflictsWith(clause2)) {
-					return true;
+				if (clause1.canBeResolvedWith(clause2)){
+					Clause resolvent = clause1.resolveWith(clause2);
+					if (!newResolvents.contains(resolvent)) {
+						newResolvents.add(resolvent);
+					}
 				}
 			}
 		}
-		return false;
+		return newResolvents;
+	}
+	
+	public XML toXML() {
+		XML root = new XML("and");
+		for(Clause clause : clauses) {
+			root.addChild(clause.toXML());
+		}
+		return root;
 	}
 }
