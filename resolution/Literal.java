@@ -7,9 +7,15 @@ public class Literal {
 	private String atom;
 	private boolean isNegated;
 	
-	public Literal(XML root) {
-		atom = root.getName().equals("not") ? root.getChild(0).getName() : root.getName();
-		isNegated = root.getName().equals("not");
+	private Literal(String atom, boolean isNegated) {
+		this.atom = atom;
+		this.isNegated = isNegated;
+	}
+	
+	public static Literal fromXML(XML literalRoot) {
+		String atom = literalRoot.getName().equals("not") ? literalRoot.getChild(0).getName() : literalRoot.getName();
+		boolean isNegated = literalRoot.getName().equals("not");
+		return new Literal(atom, isNegated);
 	}
 	
 	public XML toXML() {

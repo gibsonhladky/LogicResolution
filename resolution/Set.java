@@ -9,16 +9,21 @@ public class Set {
 
 	private List<Clause> clauses;
 	
-	public Set(XML setRoot) {
-		clauses = new ArrayList<Clause>();
-		addAllClausesFrom(setRoot);
+	private Set(List<Clause> clauses) {
+		this.clauses = clauses;
 		removeRedundancy();
 	}
 	
-	private void addAllClausesFrom(XML root) {
-		for(XML clauseNode : root.getChildren()) {
-			clauses.add(new Clause(clauseNode));
+	public static Set fromXML(XML setRoot) {
+		return new Set(clausesFromXML(setRoot.getChildren()));
+	}
+	
+	private static List<Clause> clausesFromXML(XML[] clauseRoots) {
+		List<Clause> clauses = new ArrayList<Clause>(clauseRoots.length);
+		for(XML clauseRoot : clauseRoots) {
+			clauses.add(Clause.fromXML(clauseRoot));
 		}
+		return clauses;
 	}
 	
 	public XML toXML() {

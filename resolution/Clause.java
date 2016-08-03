@@ -9,15 +9,20 @@ public class Clause {
 
 	private List<Literal> literals;
 	
-	public Clause(XML clauseRoot) {
-		literals = new ArrayList<Literal>(clauseRoot.getChildCount());
-		addLiteralsFrom(clauseRoot);
+	private Clause(List<Literal> literals) {
+		this.literals = literals;
 	}
 	
-	private void addLiteralsFrom(XML clauseRoot) {
-		for(XML literalNode : clauseRoot.getChildren()) {
-			literals.add(new Literal(literalNode));
+	public static Clause fromXML(XML clauseRoot) {
+		return new Clause(literalsFromXML(clauseRoot.getChildren()));
+	}
+	
+	private static List<Literal> literalsFromXML(XML[] literalRoots) {
+		List<Literal> literals = new ArrayList<Literal>(literalRoots.length);
+		for(XML literalRoot : literalRoots) {
+			literals.add(Literal.fromXML(literalRoot));
 		}
+		return literals;
 	}
 	
 	public XML toXML() {
@@ -93,7 +98,7 @@ public class Clause {
 				resolventNode.addChild(literal.toXML());
 			}
 		}
-		Clause resolvent = new Clause(resolventNode);
+		Clause resolvent = Clause.fromXML(resolventNode);
 		resolvent.removeRedundantLiterals();
 		return resolvent;
 	}

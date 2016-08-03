@@ -232,7 +232,7 @@ public class Resolution extends DrawableTree {
 	public void collapse() {
 		unnestLogic(tree);
 		guaranteeFormat();
-		Set set = new Set(tree.getChild(0));
+		Set set = Set.fromXML(tree.getChild(0));
 		replaceChildWith(tree.getChild(0), set.toXML());
 		dirtyTree = true;
 	}
@@ -308,7 +308,7 @@ public class Resolution extends DrawableTree {
 	// method returns true when a conflict is found, otherwise it
 	// only returns false after exploring all possible resolvents.
 	public boolean applyResolution() {
-		Set set = new Set(tree.getChild(0));
+		Set set = Set.fromXML(tree.getChild(0));
 		set.resolve();
 		replaceChildWith(tree.getChild(0), set.toXML());
 		dirtyTree = true;
