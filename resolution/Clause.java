@@ -7,12 +7,10 @@ import processing.data.XML;
 
 public class Clause {
 
-	private XML root;
 	private List<Literal> literals;
 	
 	public Clause(XML clauseRoot) {
-		root = clauseRoot;
-		literals = new ArrayList<Literal>(root.getChildCount());
+		literals = new ArrayList<Literal>(clauseRoot.getChildCount());
 		addLiteralsFrom(clauseRoot);
 	}
 	
@@ -83,20 +81,20 @@ public class Clause {
 		return true;
 	}
 	
-	public XML resolveWith(XML other) {
-		Clause otherClause = new Clause(other);
-		XML resolvent = new XML("or");
+	public Clause resolveWith(Clause other) {
+		XML resolventNode = new XML("or");
 		for(Literal literal : literals) {
-			if(!otherClause.containsInverseOfLiteral(literal)) {
-				resolvent.addChild(literal.toXML());
+			if(!other.containsInverseOfLiteral(literal)) {
+				resolventNode.addChild(literal.toXML());
 			}
 		}
-		for(Literal literal : otherClause.literals) {
+		for(Literal literal : other.literals) {
 			if(!containsInverseOfLiteral(literal)) {
-				resolvent.addChild(literal.toXML());
+				resolventNode.addChild(literal.toXML());
 			}
 		}
-		new Clause(resolvent).removeRedundantLiterals();
+		Clause resolvent = new Clause(resolventNode);
+		resolvent.removeRedundantLiterals();
 		return resolvent;
 	}
 	
@@ -111,25 +109,13 @@ public class Clause {
 		return false;
 	}
 	
-	// TODO: Break dependency on root here
 	public void removeRedundantLiterals() {
 		List<Literal> nonRedundantLiterals = new ArrayList<Literal>();
-		for (int i = 0; i < root.getChildCount(); i++) {
-			Literal newLiteral = new Literal(root.getChild(i));
-			if(!nonRedundantLiterals.contains(newLiteral)) {
-				nonRedundantLiterals.add(newLiteral);
+		for (Literal literal : literals) {
+			if(!nonRedundantLiterals.contains(literal)) {
+				nonRedundantLiterals.add(literal);
 			}
-			removeMultiplesOfLiteral(root.getChild(i));
 		}
 		literals = nonRedundantLiterals;
-	}
-	
-	private void removeMultiplesOfLiteral(XML literalNode) {
-		for(XML child : root.getChildren()) {
-			if(new Literal(child).equals(new Literal(literalNode)) && !child.equals(literalNode)) {
-				root.removeChild(child);
-//				literals.remove(new Literal(child));
-			}
-		}
 	}
 }

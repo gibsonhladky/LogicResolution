@@ -67,9 +67,9 @@ public class Set {
 		for (Clause clause1 : clauses) {
 			for (Clause clause2 : clauses) {
 				if (clause1.canBeResolvedWith(clause2)){
-					XML resolvent = clause1.resolveWith(clause2.toXML());
+					Clause resolvent = clause1.resolveWith(clause2);
 					// Add new valid non-duplicate resolvents
-					if (!clauses.contains(new Clause(resolvent))) {
+					if (!clauses.contains(resolvent)) {
 						return true;
 					}
 				}
@@ -83,10 +83,10 @@ public class Set {
 		for (Clause clause1 : clauses) {
 			for (Clause clause2 : clauses) {
 				if (clause1.canBeResolvedWith(clause2)){
-					XML resolvent = clause1.resolveWith(clause2.toXML());
+					Clause resolvent = clause1.resolveWith(clause2);
 					// Add new valid non-duplicate resolvents
 					if (!clauses.contains(newResolvents)) {
-						newResolvents.add(new Clause(resolvent));
+						newResolvents.add(resolvent);
 					}
 				}
 			}
